@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <menuitem name="SD Design" id="sd_design_demo_menu_root">
+            <menuitem action="test_sd_design_demo_client" name="页面demo" id="test_sd_design_demo_client_menu"/>
+            <menuitem action="test_sd_design_demo_act_window" name="记录demo" id="test_sd_design_demo_act_window_menu"/>
+        </menuitem>
+    </data>
+</odoo>

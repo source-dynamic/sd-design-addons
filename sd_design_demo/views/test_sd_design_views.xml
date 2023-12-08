@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="test_sd_design_demo_client" model="ir.actions.client">
+            <field name="name">Test sd-design Client</field>
+            <field name="tag">test_sd_design_demo_client</field>
+            <field name="context" eval="{'model': 'report.mrp.report_mo_overview'}"/>
+        </record>
+
+        <record id="test_sd_design_demo_tree" model="ir.ui.view">
+            <field name="model">sd_design_demo.design.model</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="id"/>
+                    <field name="field1"/>
+                    <field name="field2"/>
+                </tree>
+            </field>
+        </record>
+
+        <record id="test_sd_design_demo_form" model="ir.ui.view">
+            <field name="model">sd_design_demo.design.model</field>
+            <field name="arch" type="xml">
+                <form>
+                    <sheet>
+                        <group>
+                            <field name="field1"/>
+                            <field name="field2" widget="numberField"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record model="ir.actions.act_window" id="test_sd_design_demo_act_window">
+            <field name="name">Test sd-design Record</field>
+            <field name="res_model">sd_design_demo.design.model</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+    </data>
+</odoo>
