@@ -194,6 +194,11 @@
         return result;
     };
 
+    const baseProps = {
+        slots: { type: Object, optional: true },
+        ref: { type: Object, optional: true }
+    };
+
     const parseFlex = (flex) => {
         if (typeof flex === 'number') {
             return `${flex} ${flex} auto`;
@@ -204,6 +209,22 @@
         return flex;
     };
     class Col extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            span: { type: [Number, String], optional: true },
+            order: { type: [Number, String], optional: true },
+            offset: { type: [Number, String], optional: true },
+            push: { type: [Number, String], optional: true },
+            pull: { type: [Number, String], optional: true },
+            xs: { type: [Number, Object], optional: true },
+            sm: { type: [Number, Object], optional: true },
+            md: { type: [Number, Object], optional: true },
+            lg: { type: [Number, Object], optional: true },
+            xl: { type: [Number, Object], optional: true },
+            xxl: { type: [Number, Object], optional: true },
+            flex: { type: [Number, String], optional: true },
+            ...baseProps
+        };
         static template = owl.xml `
     <div t-att-class="getClasses()" t-att-style="getStyle()">
         <t t-slot="default"/>
@@ -250,6 +271,14 @@
     }
 
     class Row extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            gutter: { type: [Number, Array], optional: true },
+            align: { type: String, optional: true },
+            justify: { type: String, optional: true },
+            wrap: { type: Boolean, optional: true },
+            ...baseProps
+        };
         static template = owl.xml `
         <div t-att-class="state.className" t-att-style="state.style">
             <t t-slot="default"/>
@@ -347,6 +376,21 @@
     });
     const showCountSpanClass = getPrefixCls('input-show-count-suffix');
     class ClearableLabeledWrapper extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            inputType: { type: String, optional: true },
+            direction: { type: String, optional: true },
+            value: { type: [String, Number], optional: true },
+            allowClear: { type: Boolean, optional: true },
+            disabled: { type: Boolean, optional: true },
+            focused: { type: Boolean, optional: true },
+            readOnly: { type: Boolean, optional: true },
+            bordered: { type: Boolean, optional: true },
+            handleReset: { type: Function, optional: true },
+            count: { type: String, optional: true },
+            size: { type: String, optional: true },
+            ...baseProps
+        };
         /**
          * 渲染清除按钮的模版
          */
@@ -434,7 +478,6 @@
                 </t>
                 <t t-else="">
                     <t t-set="textAreaIconClass" t-value="renderTextAreaWithClearIconClass()"/>
-                    
                     <span t-att-class="textAreaIconClass.affixWrapperCls">
                         <t t-slot="default"/>
                         
@@ -478,7 +521,7 @@
          * 清除图标的class
          */
         renderClearIconClass() {
-            const { value, allowClear, disabled, readOnly, suffix } = this.props;
+            const { value, allowClear, disabled, readOnly, slots } = this.props;
             if (!allowClear) {
                 return;
             }
@@ -487,14 +530,14 @@
             const className = `${prefixCls}-clear-icon`;
             return classNames({
                 [`${className}-hidden`]: !needClear,
-                [`${className}-has-suffix`]: !!suffix
+                [`${className}-has-suffix`]: !!slots?.suffix
             }, className);
         }
         /**
          * innerTemplate主区域部分的class
          */
         renderLabeledIconClass() {
-            const { focused, value, size, suffix, disabled, allowClear, direction, readOnly, bordered } = this.props;
+            const { focused, value, size, disabled, allowClear, direction, readOnly, bordered, slots } = this.props;
             const prefixCls = getPrefixCls('input');
             const suffixClass = `${prefixCls}-suffix`;
             const prefixClass = `${prefixCls}-prefix`;
@@ -503,7 +546,7 @@
                 [`${prefixCls}-affix-wrapper-disabled`]: disabled,
                 [`${prefixCls}-affix-wrapper-sm`]: size === 'small',
                 [`${prefixCls}-affix-wrapper-lg`]: size === 'large',
-                [`${prefixCls}-affix-wrapper-input-with-clear-btn`]: suffix && allowClear && value,
+                [`${prefixCls}-affix-wrapper-input-with-clear-btn`]: allowClear && value,
                 [`${prefixCls}-affix-wrapper-rtl`]: direction === 'rtl',
                 [`${prefixCls}-affix-wrapper-readonly`]: readOnly,
                 [`${prefixCls}-affix-wrapper-borderless`]: !bordered
@@ -549,13 +592,14 @@
      * 管理受控组件的值，比如props中未传入某个值时，由组件内部管理一个state，传入了则交由外部管理
      * @param props 组件的props
      * @param defaultState 默认值，必须包含所有待监控的key，未传入的key将被忽略
+     * @param format 格式化函数，用于将props中的值转换为state中的值
      */
-    const useControllableState = (props, defaultState) => {
+    const useControllableState = (props, defaultState, format) => {
         const state = owl.useState(defaultState);
         const updateState = (props) => {
             for (const key in props) {
                 if (key in defaultState) {
-                    state[key] = props[key];
+                    state[key] = format ? format(props[key]) : props[key];
                 }
             }
         };
@@ -567,7 +611,7 @@
             for (const key in values) {
                 // 如果props中未传入该值，说明是非受控组件，则交由组件内部管理
                 if (!(key in props)) {
-                    state[key] = values[key];
+                    state[key] = format ? format(values[key]) : values[key];
                 }
             }
         };
@@ -580,7 +624,13 @@
         };
     };
 
-    const useImperativeHandle = (comp, createHandle) => {
+    const useCompRef = () => {
+        return {
+            current: undefined
+        };
+    };
+    const useImperativeHandle = (createHandle) => {
+        const comp = owl.useComponent();
         owl.useEffect(() => {
             const props = comp.props;
             if (props.hasOwnProperty('ref') && !!props.ref) {
@@ -616,6 +666,27 @@
         }
     }
     class Input extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            size: { type: String, optional: true },
+            disabled: { type: Boolean, optional: true },
+            type: { type: String, optional: true },
+            maxLength: { type: Number, optional: true },
+            allowClear: { type: Boolean, optional: true },
+            bordered: { type: Boolean, optional: true },
+            placeholder: { type: String, optional: true },
+            showCount: { type: Boolean, optional: true },
+            defaultValue: { type: String, optional: true },
+            value: { type: String, optional: true },
+            onFocus: { type: Function, optional: true },
+            onBlur: { type: Function, optional: true },
+            onChange: { type: Function, optional: true },
+            onInput: { type: Function, optional: true },
+            onPressEnter: { type: Function, optional: true },
+            onKeyDown: { type: Function, optional: true },
+            readonly: { type: Boolean, optional: true },
+            ...baseProps
+        };
         static components = { ClearableLabeledWrapper };
         static template = owl.xml `
 <ClearableLabeledWrapper inputType="'input'" bordered="props.bordered" size="props.size"
@@ -746,7 +817,7 @@
         }
         setup() {
             this.inputRef = owl.useRef('input');
-            useImperativeHandle(this, {
+            useImperativeHandle({
                 focus: this.focus.bind(this),
                 blur: this.blur.bind(this)
             });
@@ -785,6 +856,11 @@
     });
     const passwordClass = getPrefixCls('input-password');
     class Password extends Input {
+        static props = {
+            ...Input.props,
+            visible: { type: Boolean, optional: true },
+            onVisibleChange: { type: Function, optional: true }
+        };
         static template = owl.xml `
  <ClearableLabeledWrapper inputType="'input'" bordered="props.bordered" size="props.size"
     disabled="props.disabled" focused="state.focused" allowClear="props.allowClear" value="state.value"
@@ -899,6 +975,11 @@
 
     const textareaClass = getPrefixCls('input-textarea');
     class TextArea extends Input {
+        static props = {
+            ...Input.props,
+            autoSize: { type: [Boolean, Object], optional: true },
+            onResize: { type: Function, optional: true }
+        };
         static template = owl.xml `
 <ClearableLabeledWrapper inputType="'text'" bordered="props.bordered" size="props.size"
     disabled="props.disabled" focused="state.focused" allowClear="props.allowClear" value="controllableState.state.value"
@@ -3921,6 +4002,34 @@
         height: '1em'
     });
     class InputNumber extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            step: { type: Number, optional: true },
+            defaultValue: { type: Number, optional: true },
+            value: { type: Number, optional: true },
+            size: { type: String, optional: true },
+            onFocus: { type: Function, optional: true },
+            onBlur: { type: Function, optional: true },
+            onChange: { type: Function, optional: true },
+            max: { type: Number, optional: true },
+            min: { type: Number, optional: true },
+            placeholder: { type: String, optional: true },
+            disabled: { type: Boolean, optional: true },
+            bordered: { type: Boolean, optional: true },
+            autoFocus: { type: Boolean, optional: true },
+            changeOnBlur: { type: Boolean, optional: true },
+            controls: { type: Boolean, optional: true },
+            decimalSeparator: { type: String, optional: true },
+            precision: { type: Number, optional: true },
+            formatter: { type: Function, optional: true },
+            parser: { type: Function, optional: true },
+            keyboard: { type: Boolean, optional: true },
+            readonly: { type: Boolean, optional: true },
+            stringMode: { type: Boolean, optional: true },
+            onPressEnter: { type: Function, optional: true },
+            onStep: { type: Function, optional: true },
+            ...baseProps
+        };
         static defaultProps = {
             autoFocus: false,
             changeOnBlur: true,
@@ -3986,7 +4095,7 @@
         });
         controllableState = useControllableState(this.props, {
             value: this.props.defaultValue ? this.precisionValue(BigNumber(this.props.defaultValue)) : ''
-        });
+        }, (val) => `${val}`);
         inputRef = { current: undefined };
         /**
          * 判断是否有前置、后置部分
@@ -4164,7 +4273,7 @@
             this.onchangeValue(this.getValueNotOutOfRange(newValue.toFixed()));
         }
         getClasses() {
-            return classNames(inputNumberClass, {
+            return classNames(inputNumberClass, this.props.className, {
                 [`${inputNumberClass}-focused`]: this.state.focused,
                 [`${inputNumberClass}-disabled`]: !!this.props.disabled,
                 [`${inputNumberClass}-borderless`]: this.props.bordered === false
@@ -4213,7 +4322,7 @@
             return value;
         }
         setup() {
-            useImperativeHandle(this, {
+            useImperativeHandle({
                 focus: this.focus.bind(this),
                 blur: this.blur.bind(this)
             });
@@ -4222,6 +4331,335 @@
                     this.inputRef.current?.focus();
                 }
             }, () => [this.inputRef.current]);
+        }
+    }
+
+    class Item extends owl.Component {
+        static template = owl.xml `
+<div>
+    sasdf
+</div>    
+`;
+    }
+
+    /**
+     * 返回指定元素实时的宽高
+     * @param targetRefName
+     */
+    const useSize = (targetRefName) => {
+        const targetRef = owl.useRef(targetRefName);
+        const state = owl.useState({
+            width: undefined,
+            height: undefined,
+        });
+        owl.useEffect(() => {
+            if (targetRef.el) {
+                const resizeObserver = new ResizeObserver((entries) => {
+                    entries.forEach((entry) => {
+                        const { clientWidth, clientHeight } = entry.target;
+                        state.width = clientWidth;
+                        state.height = clientHeight;
+                    });
+                });
+                resizeObserver.observe(targetRef.el);
+                return () => {
+                    resizeObserver.disconnect();
+                };
+            }
+        }, () => [targetRef.el]);
+        return state;
+    };
+
+    const isNumber = (value) => typeof value === 'number';
+
+    const useEventListener = (target, eventName, handler, eventParams) => {
+        const comp = owl.useComponent();
+        owl.useEffect(() => {
+            if (target.el) {
+                const listener = (event) => handler.call(comp, event);
+                target.el?.addEventListener(eventName, listener, eventParams);
+                return () => target.el?.removeEventListener(eventName, listener, eventParams);
+            }
+        }, () => [target.el]);
+    };
+
+    class VirtualList extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            list: { type: Array },
+            height: { type: Number, optional: true },
+            itemHeight: { type: [Number, Function] },
+            overscan: { type: Number, optional: true },
+            onScroll: { type: Function, optional: true },
+            ...baseProps
+        };
+        static defaultProps = {
+            overscan: 5
+        };
+        static template = owl.xml `
+<div t-att-class="props.className" t-ref="container" t-att-style="getStyle()">
+    <div t-ref="wrapper" t-att-style="state.wrapperStyle">
+        <t t-foreach="state.targetList" t-as="target" t-key="target.index">
+            <t t-slot="item" data="target.data" index="target.index" style="target.style"/>
+        </t>
+    </div>
+</div>   
+    `;
+        containerRef = owl.useRef('container');
+        wrapperRef = owl.useRef('wrapper');
+        size = useSize('container');
+        state = owl.useState({
+            scrollTriggerByScrollToFunc: false,
+            targetList: [],
+            wrapperStyle: undefined,
+            containerHeight: 0
+        });
+        getStyle() {
+            const { height } = this.props;
+            const style = {
+                height: '100%',
+                overflow: 'auto'
+            };
+            if (isNumber(height)) {
+                style.height = `${height}px`;
+            }
+            return stylesToString(style);
+        }
+        getTotalHeight() {
+            const { itemHeight } = this.props;
+            if (isNumber(itemHeight)) {
+                // 如果是固定高度，则直接计算
+                return this.props.list.length * itemHeight;
+            }
+            let sum = 0;
+            for (let i = 0; i < this.props.list.length; i++) {
+                const item = this.props.list[i];
+                const height = itemHeight(i, item);
+                sum += height;
+            }
+            return sum;
+        }
+        /**
+         * 获取当前的数据偏移量，注：指向的下一个数据索引
+         * @param scrollTop 滚动条距离顶部的距离
+         * @protected
+         */
+        getOffset(scrollTop) {
+            const { itemHeight } = this.props;
+            if (isNumber(itemHeight)) {
+                // 如果是固定高度，则直接计算
+                return Math.ceil(scrollTop / itemHeight);
+            }
+            let sum = 0;
+            let offset = 0;
+            for (let i = 0; i < this.props.list.length; i++) {
+                const item = this.props.list[i];
+                const height = itemHeight(i, item);
+                sum += height;
+                if (sum >= scrollTop) {
+                    offset = i;
+                    break;
+                }
+            }
+            return offset + 1;
+        }
+        /**
+         * 获取可视区域内的数据数量
+         * @param clientHeight
+         * @param fromIndex
+         * @protected
+         */
+        getVisibleCount(clientHeight, fromIndex) {
+            const { itemHeight } = this.props;
+            if (isNumber(itemHeight)) {
+                // 如果是固定高度，则直接计算
+                return Math.ceil(clientHeight / itemHeight);
+            }
+            let sum = 0;
+            let endIndex = 0;
+            for (let i = fromIndex; i < this.props.list.length; i++) {
+                const item = this.props.list[i];
+                const height = itemHeight(i, item);
+                sum += height;
+                endIndex = i;
+                if (sum >= clientHeight) {
+                    break;
+                }
+            }
+            return endIndex - fromIndex;
+        }
+        /**
+         * 计算指定索引的数据距离顶部的距离
+         * @param index
+         * @protected
+         */
+        getDistanceTop(index) {
+            const { itemHeight } = this.props;
+            if (isNumber(itemHeight)) {
+                // 如果是固定高度，则直接计算
+                return index * itemHeight;
+            }
+            let sum = 0;
+            for (let i = 0; i < index; i++) {
+                const item = this.props.list[i];
+                const height = itemHeight(i, item);
+                sum += height;
+            }
+            return sum;
+        }
+        /**
+         * 计算可视区域内的数据
+         * @protected
+         */
+        calculateRange() {
+            const { overscan, itemHeight } = this.props;
+            const container = this.containerRef.el;
+            if (container) {
+                const { scrollTop, clientHeight } = container;
+                const offset = this.getOffset(scrollTop);
+                const visibleCount = this.getVisibleCount(clientHeight, offset);
+                const start = Math.max(0, offset - overscan);
+                const end = Math.min(this.props.list.length, offset + visibleCount + overscan);
+                const offsetTop = this.getDistanceTop(start);
+                const totalHeight = this.getTotalHeight();
+                this.state.containerHeight = clientHeight;
+                this.state.wrapperStyle = stylesToString({
+                    height: `${totalHeight - offsetTop}px`,
+                    'margin-top': `${offsetTop}px`
+                });
+                this.state.targetList = this.props.list.slice(start, end).map((data, index) => ({
+                    index: start + index,
+                    data,
+                    style: stylesToString({
+                        height: isNumber(itemHeight) ? `${itemHeight}px` : `${itemHeight(start + index, data)}px`
+                    })
+                }));
+            }
+        }
+        scrollTo(index) {
+            if (this.containerRef.el) {
+                this.state.scrollTriggerByScrollToFunc = true;
+                this.containerRef.el.scrollTop = this.getDistanceTop(index);
+                this.calculateRange();
+            }
+        }
+        ;
+        setup() {
+            useImperativeHandle({
+                scrollTo: this.scrollTo.bind(this)
+            });
+            useEventListener(this.containerRef, 'scroll', (event) => {
+                if (this.state.scrollTriggerByScrollToFunc) {
+                    // 如果是 scrollTo 方法触发的滚动，则不再触发计算
+                    this.state.scrollTriggerByScrollToFunc = false;
+                    return;
+                }
+                event.preventDefault();
+                this.calculateRange();
+                let position = 'mid';
+                if (event.currentTarget.scrollTop === 0) {
+                    position = 'start';
+                }
+                else if (event.currentTarget.scrollHeight - event.currentTarget.scrollTop === this.state.containerHeight) {
+                    // 可滚动总高度 - 滚动条距离顶部的距离 和 容器高度相等表示滚动到底部
+                    position = 'end';
+                }
+                this.props.onScroll?.(event, position);
+            });
+            owl.useEffect(() => {
+                if (!this.size.width || !this.size.height)
+                    return;
+                this.calculateRange();
+            }, () => [this.size.width, this.size.height, this.props.list]);
+        }
+    }
+
+    const listClass = getPrefixCls('list');
+    const listHeadClass = getPrefixCls('list-head');
+    const listContainerClass = getPrefixCls('list-container');
+    const listFooterClass = getPrefixCls('list-footer');
+    const listItemsClass = getPrefixCls('list-items');
+    const listItemClass = getPrefixCls('list-item');
+    const vrListItemClass = getPrefixCls('vr-list-item');
+    class List extends owl.Component {
+        static components = { Item, VirtualList };
+        static props = {
+            className: { type: String, optional: true },
+            bordered: { type: Boolean, optional: true },
+            size: { type: String, optional: true },
+            dataSource: { type: Array, optional: true },
+            virtual: { type: Boolean, optional: true },
+            height: { type: Number, optional: true },
+            itemHeight: { type: [Number, Function], optional: true },
+            onScroll: { type: Function, optional: true },
+            ...baseProps
+        };
+        static defaultProps = {
+            dataSource: [],
+            bordered: false
+        };
+        static template = owl.xml `
+<div t-att-class="getClasses()">
+    <t t-if="hasHeader()">
+        <div class="${listHeadClass}">
+            <t t-slot="header"/>
+        </div>
+    </t>
+    
+    <div class="${listContainerClass}">
+        <t t-if="showItems()">
+            <t t-if="props.virtual">
+                <VirtualList ref="virRef" onScroll.bind="onScroll" list="props.dataSource" itemHeight="props.itemHeight" height="props.height">
+                    <t t-set-slot="item" t-slot-scope="scope">
+                        <div class="${vrListItemClass} ${listItemClass}" t-att-style="scope.style">
+                            <t t-slot="item" t-props="scope"/>
+                        </div>
+                    </t>
+                </VirtualList>
+            </t>
+            <div t-else="" class="${listItemsClass}">
+                <div class="${listItemClass}" t-foreach="props.dataSource" t-as="item" t-key="item_index">
+                    <t t-slot="item" data="item" index="item_index"/>
+                </div>
+            </div>
+        </t>
+    </div>
+    
+    <t t-if="hasFooter()">
+        <div class="${listFooterClass}">
+            <t t-slot="footer"/>
+        </div>
+    </t>
+</div>   
+    `;
+        state = owl.useState({});
+        virRef = useCompRef();
+        hasHeader() {
+            return !!this.props.slots?.header;
+        }
+        hasFooter() {
+            return !!this.props.slots?.footer;
+        }
+        showItems() {
+            return !!this.props.slots?.item;
+        }
+        getClasses() {
+            const { className, bordered, size, virtual } = this.props;
+            const hasAnySlot = this.hasFooter() || this.hasHeader() || this.showItems();
+            return classNames(className, listClass, {
+                [`${listClass}-borderless`]: !bordered || !hasAnySlot,
+                [`${listClass}-sm`]: size === 'small',
+                [`${listClass}-lg`]: size === 'large',
+                [`${listClass}-vt`]: !!virtual,
+            });
+        }
+        onScroll(event, position) {
+            this.props.onScroll?.(event, position);
+        }
+        setup() {
+            useImperativeHandle({
+                scrollTo: (index) => this.virRef.current?.scrollTo(index)
+            });
         }
     }
 
@@ -5047,13 +5485,14 @@
 
     setThemes('#71639e');
     const __info__ = {
-        version: '1.0.0',
-        date: '2023-12-08T02:05:07.225Z'
+        version: 'beta-1.0.0',
+        date: '2023-12-15T08:04:18.567Z'
     };
 
     exports.Col = Col;
     exports.Input = InputComponent;
     exports.InputNumber = InputNumber;
+    exports.List = List;
     exports.Row = Row;
     exports.__info__ = __info__;
 
