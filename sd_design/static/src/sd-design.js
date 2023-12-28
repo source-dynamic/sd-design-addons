@@ -368,9 +368,9 @@
         });
     }
 
-    var _closeFillSVG = "<svg class=\"icon\" viewBox=\"0 0 1024 1024\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M514.133 85.333C275.2 85.333 87.467 273.067 87.467 512c0 234.667 189.866 426.667 424.533 426.667s426.667-192 426.667-426.667c0-236.8-192-426.667-424.534-426.667zm162.134 558.934c8.533 8.533 8.533 21.333 0 29.866-4.267 4.267-10.667 6.4-14.934 6.4-6.4 0-10.666-2.133-14.933-6.4L512 539.733l-136.533 134.4c-4.267 4.267-10.667 6.4-14.934 6.4-6.4 0-10.666-2.133-14.933-6.4-8.533-8.533-8.533-21.333 0-29.866l134.4-134.4-134.4-134.4c-8.533-8.534-8.533-21.334 0-29.867 8.533-8.533 21.333-8.533 29.867 0l134.4 134.4 134.4-134.4c8.533-8.533 21.333-8.533 29.866 0 8.534 8.533 8.534 21.333 0 29.867l-134.4 134.4 136.534 134.4z\"/></svg>";
+    var _closeSVG$1 = "<svg class=\"icon\" viewBox=\"0 0 1024 1024\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M514.133 85.333C275.2 85.333 87.467 273.067 87.467 512c0 234.667 189.866 426.667 424.533 426.667s426.667-192 426.667-426.667c0-236.8-192-426.667-424.534-426.667zm162.134 558.934c8.533 8.533 8.533 21.333 0 29.866-4.267 4.267-10.667 6.4-14.934 6.4-6.4 0-10.666-2.133-14.933-6.4L512 539.733l-136.533 134.4c-4.267 4.267-10.667 6.4-14.934 6.4-6.4 0-10.666-2.133-14.933-6.4-8.533-8.533-8.533-21.333 0-29.866l134.4-134.4-134.4-134.4c-8.533-8.534-8.533-21.334 0-29.867 8.533-8.533 21.333-8.533 29.867 0l134.4 134.4 134.4-134.4c8.533-8.533 21.333-8.533 29.866 0 8.534 8.533 8.534 21.333 0 29.867l-134.4 134.4 136.534 134.4z\"/></svg>";
 
-    const closeFillSVG = getSDSVG(_closeFillSVG, {
+    const closeFillSVG = getSDSVG(_closeSVG$1, {
         width: '1em',
         height: '1em'
     });
@@ -598,7 +598,7 @@
         const state = owl.useState(defaultState);
         const updateState = (props) => {
             for (const key in props) {
-                if (key in defaultState) {
+                if (key in defaultState && props[key] !== undefined) {
                     state[key] = format ? format(props[key]) : props[key];
                 }
             }
@@ -610,7 +610,7 @@
         const setState = (values) => {
             for (const key in values) {
                 // 如果props中未传入该值，说明是非受控组件，则交由组件内部管理
-                if (!(key in props)) {
+                if (!(key in props) && values[key] !== undefined) {
                     state[key] = format ? format(values[key]) : values[key];
                 }
             }
@@ -625,23 +625,23 @@
     };
 
     const useCompRef = () => {
-        return {
+        return owl.useState({
             current: undefined
-        };
+        });
     };
-    const useImperativeHandle = (createHandle) => {
+    const useImperativeHandle = (createHandle, depends) => {
         const comp = owl.useComponent();
         owl.useEffect(() => {
             const props = comp.props;
             if (props.hasOwnProperty('ref') && !!props.ref) {
-                props.ref.current = createHandle;
+                props.ref.current = createHandle();
             }
             return () => {
                 if (props.hasOwnProperty('ref') && !!props.ref) {
                     props.ref.current = undefined;
                 }
             };
-        }, () => [comp.props]);
+        }, depends);
     };
 
     function triggerFocus(element, option) {
@@ -689,7 +689,7 @@
         };
         static components = { ClearableLabeledWrapper };
         static template = owl.xml `
-<ClearableLabeledWrapper inputType="'input'" bordered="props.bordered" size="props.size"
+<ClearableLabeledWrapper className="props.className" inputType="'input'" bordered="props.bordered" size="props.size"
     disabled="props.disabled" focused="state.focused" allowClear="props.allowClear" value="controllableState.state.value"
     handleReset.alike="(e) => this.handleReset(e)" slots="props.slots" count="state.count"
 >
@@ -727,9 +727,9 @@
             value: this.props.defaultValue ?? ''
         });
         getClasses() {
-            const { size, disabled, bordered, className } = this.props;
+            const { size, disabled, bordered } = this.props;
             const prefixCls = getPrefixCls('input');
-            return classNames(getInputClassName(prefixCls, bordered, size, disabled), className);
+            return classNames(getInputClassName(prefixCls, bordered, size, disabled));
         }
         focus() {
             triggerFocus(this.inputRef.el);
@@ -817,10 +817,10 @@
         }
         setup() {
             this.inputRef = owl.useRef('input');
-            useImperativeHandle({
+            useImperativeHandle(() => ({
                 focus: this.focus.bind(this),
                 blur: this.blur.bind(this)
-            });
+            }), () => []);
             owl.useEffect(() => {
                 this.state.restProps = this.getRestProps();
             }, () => [this.props]);
@@ -862,7 +862,7 @@
             onVisibleChange: { type: Function, optional: true }
         };
         static template = owl.xml `
- <ClearableLabeledWrapper inputType="'input'" bordered="props.bordered" size="props.size"
+ <ClearableLabeledWrapper className="props.className" inputType="'input'" bordered="props.bordered" size="props.size"
     disabled="props.disabled" focused="state.focused" allowClear="props.allowClear" value="state.value"
     handleReset.alike="(e) => this.handleReset(e)" slots="props.slots">
     <t t-set-slot="suffix">
@@ -977,11 +977,12 @@
     class TextArea extends Input {
         static props = {
             ...Input.props,
+            rows: { type: Number, optional: true },
             autoSize: { type: [Boolean, Object], optional: true },
             onResize: { type: Function, optional: true }
         };
         static template = owl.xml `
-<ClearableLabeledWrapper inputType="'text'" bordered="props.bordered" size="props.size"
+<ClearableLabeledWrapper className="props.className" inputType="'text'" bordered="props.bordered" size="props.size"
     disabled="props.disabled" focused="state.focused" allowClear="props.allowClear" value="controllableState.state.value"
     handleReset.alike="(e) => this.handleReset(e)" count="state.count"
 >
@@ -3997,7 +3998,7 @@
         width: '1em',
         height: '1em'
     });
-    const downSVG = getSDSVG(_downSVG, {
+    const downSVG$1 = getSDSVG(_downSVG, {
         width: '1em',
         height: '1em'
     });
@@ -4063,7 +4064,7 @@
             </span>
             <span t-att-class="iconClass.decrease" t-on-click="(event) => this.onStep('down', event)">
                 <t t-slot="downIcon">
-                    ${downSVG}
+                    ${downSVG$1}
                 </t>
             </span>
         </span>
@@ -4322,10 +4323,10 @@
             return value;
         }
         setup() {
-            useImperativeHandle({
+            useImperativeHandle(() => ({
                 focus: this.focus.bind(this),
                 blur: this.blur.bind(this)
-            });
+            }), () => []);
             owl.useEffect(() => {
                 if (this.props.autoFocus) {
                     this.inputRef.current?.focus();
@@ -4372,17 +4373,19 @@
 
     const isNumber = (value) => typeof value === 'number';
 
-    const useEventListener = (target, eventName, handler, eventParams) => {
+    const useEventListener = (targetRef, eventName, handler, eventParams) => {
         const comp = owl.useComponent();
         owl.useEffect(() => {
-            if (target.el) {
+            if (targetRef.el) {
                 const listener = (event) => handler.call(comp, event);
-                target.el?.addEventListener(eventName, listener, eventParams);
-                return () => target.el?.removeEventListener(eventName, listener, eventParams);
+                targetRef.el?.addEventListener(eventName, listener, eventParams);
+                return () => targetRef.el?.removeEventListener(eventName, listener, eventParams);
             }
-        }, () => [target.el]);
+        }, () => [targetRef.el]);
     };
 
+    const VirtualListClass = getPrefixCls('vir-list');
+    const VirtualListWrapperClass = getPrefixCls('vir-list-wrapper');
     class VirtualList extends owl.Component {
         static props = {
             className: { type: String, optional: true },
@@ -4391,14 +4394,15 @@
             itemHeight: { type: [Number, Function] },
             overscan: { type: Number, optional: true },
             onScroll: { type: Function, optional: true },
+            onRendered: { type: Function, optional: true },
             ...baseProps
         };
         static defaultProps = {
             overscan: 5
         };
         static template = owl.xml `
-<div t-att-class="props.className" t-ref="container" t-att-style="getStyle()">
-    <div t-ref="wrapper" t-att-style="state.wrapperStyle">
+<div t-att-class="getClass()" t-ref="container" t-att-style="getStyle()">
+    <div t-ref="wrapper" t-att-style="state.wrapperStyle" class="${VirtualListWrapperClass}">
         <t t-foreach="state.targetList" t-as="target" t-key="target.index">
             <t t-slot="item" data="target.data" index="target.index" style="target.style"/>
         </t>
@@ -4409,19 +4413,28 @@
         wrapperRef = owl.useRef('wrapper');
         size = useSize('container');
         state = owl.useState({
+            renderTriggerByEffect: false,
             scrollTriggerByScrollToFunc: false,
             targetList: [],
             wrapperStyle: undefined,
             containerHeight: 0
         });
+        getClass() {
+            return classNames(VirtualListClass, this.props.className);
+        }
         getStyle() {
             const { height } = this.props;
             const style = {
-                height: '100%',
-                overflow: 'auto'
+                overflow: 'auto',
+                'overflow-anchor': 'none'
             };
+            // 如果有指定高度，则设置max-height，否则height设为100%
+            // max-height可以达到在不需要滚动时，高度自适应的效果
             if (isNumber(height)) {
-                style.height = `${height}px`;
+                style['max-height'] = `${height}px`;
+            }
+            else {
+                style['height'] = '100%';
             }
             return stylesToString(style);
         }
@@ -4545,9 +4558,9 @@
         }
         ;
         setup() {
-            useImperativeHandle({
+            useImperativeHandle(() => ({
                 scrollTo: this.scrollTo.bind(this)
-            });
+            }), () => [this.props]);
             useEventListener(this.containerRef, 'scroll', (event) => {
                 if (this.state.scrollTriggerByScrollToFunc) {
                     // 如果是 scrollTo 方法触发的滚动，则不再触发计算
@@ -4567,24 +4580,36 @@
                 this.props.onScroll?.(event, position);
             });
             owl.useEffect(() => {
-                if (!this.size.width || !this.size.height)
-                    return;
+                if (this.state.renderTriggerByEffect) {
+                    // 仅在受effect触发时才触发onRendered
+                    this.props.onRendered?.();
+                }
+                this.state.renderTriggerByEffect = false;
+            }, () => [this.state.targetList]);
+            owl.useEffect(() => {
+                this.state.renderTriggerByEffect = true;
                 this.calculateRange();
             }, () => [this.size.width, this.size.height, this.props.list]);
         }
     }
 
+    var _emptySVG = "<svg viewBox=\"0 0 64 41\" xmlns=\"http://www.w3.org/2000/svg\"><g transform=\"translate(0 1)\" fill=\"none\" fill-rule=\"evenodd\"><ellipse fill=\"#f5f5f5\" cx=\"32\" cy=\"33\" rx=\"32\" ry=\"7\"/><g fill-rule=\"nonzero\" stroke=\"#d9d9d9\"><path d=\"M55 12.76 44.854 1.258C44.367.474 43.656 0 42.907 0H21.093c-.749 0-1.46.474-1.947 1.257L9 12.761V22h46v-9.24z\"/><path d=\"M41.613 15.931c0-1.605.994-2.93 2.227-2.931H55v18.137C55 33.26 53.68 35 52.05 35h-40.1C10.32 35 9 33.259 9 31.137V13h11.16c1.233 0 2.227 1.323 2.227 2.928v.022c0 1.605 1.005 2.901 2.237 2.901h14.752c1.232 0 2.237-1.308 2.237-2.913v-.007z\" fill=\"#fafafa\"/></g></g></svg>";
+
+    getSDSVG(_emptySVG, {
+        width: '64',
+        height: '41'
+    });
     const listClass = getPrefixCls('list');
     const listHeadClass = getPrefixCls('list-head');
     const listContainerClass = getPrefixCls('list-container');
     const listFooterClass = getPrefixCls('list-footer');
-    const listItemsClass = getPrefixCls('list-items');
     const listItemClass = getPrefixCls('list-item');
     const vrListItemClass = getPrefixCls('vr-list-item');
     class List extends owl.Component {
         static components = { Item, VirtualList };
         static props = {
             className: { type: String, optional: true },
+            itemClassName: { type: Function, optional: true },
             bordered: { type: Boolean, optional: true },
             size: { type: String, optional: true },
             dataSource: { type: Array, optional: true },
@@ -4592,6 +4617,7 @@
             height: { type: Number, optional: true },
             itemHeight: { type: [Number, Function], optional: true },
             onScroll: { type: Function, optional: true },
+            onRendered: { type: Function, optional: true },
             ...baseProps
         };
         static defaultProps = {
@@ -4609,18 +4635,16 @@
     <div class="${listContainerClass}">
         <t t-if="showItems()">
             <t t-if="props.virtual">
-                <VirtualList ref="virRef" onScroll.bind="onScroll" list="props.dataSource" itemHeight="props.itemHeight" height="props.height">
+                <VirtualList ref="virRef" onScroll="props.onScroll" onRendered="props.onRendered" list="props.dataSource" itemHeight="props.itemHeight" height="props.height">
                     <t t-set-slot="item" t-slot-scope="scope">
-                        <div class="${vrListItemClass} ${listItemClass}" t-att-style="scope.style">
+                        <div t-att-class="getItemClasses(scope.data, scope.index)" t-att-style="scope.style">
                             <t t-slot="item" t-props="scope"/>
                         </div>
                     </t>
                 </VirtualList>
             </t>
-            <div t-else="" class="${listItemsClass}">
-                <div class="${listItemClass}" t-foreach="props.dataSource" t-as="item" t-key="item_index">
-                    <t t-slot="item" data="item" index="item_index"/>
-                </div>
+            <div t-else="" t-att-class="getItemClasses(item, item_index)" t-foreach="props.dataSource" t-as="item" t-key="item_index">
+                <t t-slot="item" data="item" index="item_index"/>
             </div>
         </t>
     </div>
@@ -4650,16 +4674,1969 @@
                 [`${listClass}-borderless`]: !bordered || !hasAnySlot,
                 [`${listClass}-sm`]: size === 'small',
                 [`${listClass}-lg`]: size === 'large',
-                [`${listClass}-vt`]: !!virtual,
+                [`${listClass}-vt`]: !!virtual
             });
         }
-        onScroll(event, position) {
-            this.props.onScroll?.(event, position);
+        getItemClasses(item, index) {
+            return classNames(listItemClass, this.props.itemClassName?.(item, index), {
+                [vrListItemClass]: !!this.props.virtual
+            });
         }
         setup() {
-            useImperativeHandle({
+            useImperativeHandle(() => ({
                 scrollTo: (index) => this.virRef.current?.scrollTo(index)
+            }), () => []);
+        }
+    }
+
+    var _searchSVG = "<svg class=\"icon\" viewBox=\"0 0 1024 1024\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M909.6 854.5 649.9 594.8C690.2 542.7 712 479 712 412c0-80.2-31.3-155.4-87.9-212.1-56.6-56.7-132-87.9-212.1-87.9s-155.5 31.3-212.1 87.9C143.2 256.5 112 331.8 112 412c0 80.1 31.3 155.5 87.9 212.1C256.5 680.8 331.8 712 412 712c67 0 130.6-21.8 182.7-62l259.7 259.6c3.2 3.2 8.4 3.2 11.6 0l43.6-43.5c3.2-3.2 3.2-8.4 0-11.6zM570.4 570.4C528 612.7 471.8 636 412 636s-116-23.3-158.4-65.6C211.3 528 188 471.8 188 412s23.3-116.1 65.6-158.4C296 211.3 352.2 188 412 188s116.1 23.2 158.4 65.6S636 352.2 636 412s-23.3 116.1-65.6 158.4z\"/></svg>";
+
+    var _loadingSVG = "<svg viewBox=\"0 0 1024 1024\" data-icon=\"loading\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M988 548c-19.9 0-36-16.1-36-36 0-59.4-11.6-117-34.6-171.3a440.45 440.45 0 0 0-94.3-139.9 437.71 437.71 0 0 0-139.9-94.3C629 83.6 571.4 72 512 72c-19.9 0-36-16.1-36-36s16.1-36 36-36c69.1 0 136.2 13.5 199.3 40.3C772.3 66 827 103 874 150c47 47 83.9 101.8 109.7 162.7 26.7 63.1 40.2 130.2 40.2 199.3.1 19.9-16 36-35.9 36z\"/></svg>";
+
+    var _checkSVG = "<svg class=\"icon\" viewBox=\"0 0 1024 1024\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M912 190h-69.9c-9.8 0-19.1 4.5-25.1 12.2L404.7 724.5 207 474c-6.1-7.7-15.3-12.2-25.1-12.2H112c-6.7 0-10.4 7.7-6.3 12.9l273.9 347c12.8 16.2 37.4 16.2 50.3 0l488.4-618.9c4.1-5.1.4-12.8-6.3-12.8z\"/></svg>";
+
+    function _typeof(obj) {
+      "@babel/helpers - typeof";
+
+      return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (obj) {
+        return typeof obj;
+      } : function (obj) {
+        return obj && "function" == typeof Symbol && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+      }, _typeof(obj);
+    }
+
+    var vendorPrefix;
+    var jsCssMap = {
+      Webkit: '-webkit-',
+      Moz: '-moz-',
+      // IE did it wrong again ...
+      ms: '-ms-',
+      O: '-o-'
+    };
+    function getVendorPrefix() {
+      if (vendorPrefix !== undefined) {
+        return vendorPrefix;
+      }
+      vendorPrefix = '';
+      var style = document.createElement('p').style;
+      var testProp = 'Transform';
+      for (var key in jsCssMap) {
+        if (key + testProp in style) {
+          vendorPrefix = key;
+        }
+      }
+      return vendorPrefix;
+    }
+    function getTransitionName() {
+      return getVendorPrefix() ? "".concat(getVendorPrefix(), "TransitionProperty") : 'transitionProperty';
+    }
+    function getTransformName() {
+      return getVendorPrefix() ? "".concat(getVendorPrefix(), "Transform") : 'transform';
+    }
+    function setTransitionProperty(node, value) {
+      var name = getTransitionName();
+      if (name) {
+        node.style[name] = value;
+        if (name !== 'transitionProperty') {
+          node.style.transitionProperty = value;
+        }
+      }
+    }
+    function setTransform(node, value) {
+      var name = getTransformName();
+      if (name) {
+        node.style[name] = value;
+        if (name !== 'transform') {
+          node.style.transform = value;
+        }
+      }
+    }
+    function getTransitionProperty(node) {
+      return node.style.transitionProperty || node.style[getTransitionName()];
+    }
+    function getTransformXY(node) {
+      var style = window.getComputedStyle(node, null);
+      var transform = style.getPropertyValue('transform') || style.getPropertyValue(getTransformName());
+      if (transform && transform !== 'none') {
+        var matrix = transform.replace(/[^0-9\-.,]/g, '').split(',');
+        return {
+          x: parseFloat(matrix[12] || matrix[4], 0),
+          y: parseFloat(matrix[13] || matrix[5], 0)
+        };
+      }
+      return {
+        x: 0,
+        y: 0
+      };
+    }
+    var matrix2d = /matrix\((.*)\)/;
+    var matrix3d = /matrix3d\((.*)\)/;
+    function setTransformXY(node, xy) {
+      var style = window.getComputedStyle(node, null);
+      var transform = style.getPropertyValue('transform') || style.getPropertyValue(getTransformName());
+      if (transform && transform !== 'none') {
+        var arr;
+        var match2d = transform.match(matrix2d);
+        if (match2d) {
+          match2d = match2d[1];
+          arr = match2d.split(',').map(function (item) {
+            return parseFloat(item, 10);
+          });
+          arr[4] = xy.x;
+          arr[5] = xy.y;
+          setTransform(node, "matrix(".concat(arr.join(','), ")"));
+        } else {
+          var match3d = transform.match(matrix3d)[1];
+          arr = match3d.split(',').map(function (item) {
+            return parseFloat(item, 10);
+          });
+          arr[12] = xy.x;
+          arr[13] = xy.y;
+          setTransform(node, "matrix3d(".concat(arr.join(','), ")"));
+        }
+      } else {
+        setTransform(node, "translateX(".concat(xy.x, "px) translateY(").concat(xy.y, "px) translateZ(0)"));
+      }
+    }
+
+    var RE_NUM = /[\-+]?(?:\d*\.|)\d+(?:[eE][\-+]?\d+|)/.source;
+    var getComputedStyleX;
+
+    // https://stackoverflow.com/a/3485654/3040605
+    function forceRelayout(elem) {
+      var originalStyle = elem.style.display;
+      elem.style.display = 'none';
+      elem.offsetHeight; // eslint-disable-line
+      elem.style.display = originalStyle;
+    }
+    function css(el, name, v) {
+      var value = v;
+      if (_typeof(name) === 'object') {
+        for (var i in name) {
+          if (name.hasOwnProperty(i)) {
+            css(el, i, name[i]);
+          }
+        }
+        return undefined;
+      }
+      if (typeof value !== 'undefined') {
+        if (typeof value === 'number') {
+          value = "".concat(value, "px");
+        }
+        el.style[name] = value;
+        return undefined;
+      }
+      return getComputedStyleX(el, name);
+    }
+    function getClientPosition(elem) {
+      var box;
+      var x;
+      var y;
+      var doc = elem.ownerDocument;
+      var body = doc.body;
+      var docElem = doc && doc.documentElement;
+      // 根据 GBS 最新数据，A-Grade Browsers 都已支持 getBoundingClientRect 方法，不用再考虑传统的实现方式
+      box = elem.getBoundingClientRect();
+
+      // 注：jQuery 还考虑减去 docElem.clientLeft/clientTop
+      // 但测试发现，这样反而会导致当 html 和 body 有边距/边框样式时，获取的值不正确
+      // 此外，ie6 会忽略 html 的 margin 值，幸运地是没有谁会去设置 html 的 margin
+
+      x = Math.floor(box.left);
+      y = Math.floor(box.top);
+
+      // In IE, most of the time, 2 extra pixels are added to the top and left
+      // due to the implicit 2-pixel inset border.  In IE6/7 quirks mode and
+      // IE6 standards mode, this border can be overridden by setting the
+      // document element's border to zero -- thus, we cannot rely on the
+      // offset always being 2 pixels.
+
+      // In quirks mode, the offset can be determined by querying the body's
+      // clientLeft/clientTop, but in standards mode, it is found by querying
+      // the document element's clientLeft/clientTop.  Since we already called
+      // getClientBoundingRect we have already forced a reflow, so it is not
+      // too expensive just to query them all.
+
+      // ie 下应该减去窗口的边框吧，毕竟默认 absolute 都是相对窗口定位的
+      // 窗口边框标准是设 documentElement ,quirks 时设置 body
+      // 最好禁止在 body 和 html 上边框 ，但 ie < 9 html 默认有 2px ，减去
+      // 但是非 ie 不可能设置窗口边框，body html 也不是窗口 ,ie 可以通过 html,body 设置
+      // 标准 ie 下 docElem.clientTop 就是 border-top
+      // ie7 html 即窗口边框改变不了。永远为 2
+      // 但标准 firefox/chrome/ie9 下 docElem.clientTop 是窗口边框，即使设了 border-top 也为 0
+
+      x -= docElem.clientLeft || body.clientLeft || 0;
+      y -= docElem.clientTop || body.clientTop || 0;
+      return {
+        left: x,
+        top: y
+      };
+    }
+    function getScroll(w, top) {
+      var ret = w["page".concat(top ? 'Y' : 'X', "Offset")];
+      var method = "scroll".concat(top ? 'Top' : 'Left');
+      if (typeof ret !== 'number') {
+        var d = w.document;
+        // ie6,7,8 standard mode
+        ret = d.documentElement[method];
+        if (typeof ret !== 'number') {
+          // quirks mode
+          ret = d.body[method];
+        }
+      }
+      return ret;
+    }
+    function getScrollLeft(w) {
+      return getScroll(w);
+    }
+    function getScrollTop(w) {
+      return getScroll(w, true);
+    }
+    function getOffset(el) {
+      var pos = getClientPosition(el);
+      var doc = el.ownerDocument;
+      var w = doc.defaultView || doc.parentWindow;
+      pos.left += getScrollLeft(w);
+      pos.top += getScrollTop(w);
+      return pos;
+    }
+
+    /**
+     * A crude way of determining if an object is a window
+     * @member util
+     */
+    function isWindow(obj) {
+      // must use == for ie8
+      /* eslint eqeqeq:0 */
+      return obj !== null && obj !== undefined && obj == obj.window;
+    }
+    function getDocument(node) {
+      if (isWindow(node)) {
+        return node.document;
+      }
+      if (node.nodeType === 9) {
+        return node;
+      }
+      return node.ownerDocument;
+    }
+    function _getComputedStyle(elem, name, cs) {
+      var computedStyle = cs;
+      var val = '';
+      var d = getDocument(elem);
+      computedStyle = computedStyle || d.defaultView.getComputedStyle(elem, null);
+
+      // https://github.com/kissyteam/kissy/issues/61
+      if (computedStyle) {
+        val = computedStyle.getPropertyValue(name) || computedStyle[name];
+      }
+      return val;
+    }
+    var _RE_NUM_NO_PX = new RegExp("^(".concat(RE_NUM, ")(?!px)[a-z%]+$"), 'i');
+    var RE_POS = /^(top|right|bottom|left)$/;
+    var CURRENT_STYLE = 'currentStyle';
+    var RUNTIME_STYLE = 'runtimeStyle';
+    var LEFT = 'left';
+    var PX = 'px';
+    function _getComputedStyleIE(elem, name) {
+      // currentStyle maybe null
+      // http://msdn.microsoft.com/en-us/library/ms535231.aspx
+      var ret = elem[CURRENT_STYLE] && elem[CURRENT_STYLE][name];
+
+      // 当 width/height 设置为百分比时，通过 pixelLeft 方式转换的 width/height 值
+      // 一开始就处理了! CUSTOM_STYLE.height,CUSTOM_STYLE.width ,cssHook 解决@2011-08-19
+      // 在 ie 下不对，需要直接用 offset 方式
+      // borderWidth 等值也有问题，但考虑到 borderWidth 设为百分比的概率很小，这里就不考虑了
+
+      // From the awesome hack by Dean Edwards
+      // http://erik.eae.net/archives/2007/07/27/18.54.15/#comment-102291
+      // If we're not dealing with a regular pixel number
+      // but a number that has a weird ending, we need to convert it to pixels
+      // exclude left right for relativity
+      if (_RE_NUM_NO_PX.test(ret) && !RE_POS.test(name)) {
+        // Remember the original values
+        var style = elem.style;
+        var left = style[LEFT];
+        var rsLeft = elem[RUNTIME_STYLE][LEFT];
+
+        // prevent flashing of content
+        elem[RUNTIME_STYLE][LEFT] = elem[CURRENT_STYLE][LEFT];
+
+        // Put in the new values to get a computed value out
+        style[LEFT] = name === 'fontSize' ? '1em' : ret || 0;
+        ret = style.pixelLeft + PX;
+
+        // Revert the changed values
+        style[LEFT] = left;
+        elem[RUNTIME_STYLE][LEFT] = rsLeft;
+      }
+      return ret === '' ? 'auto' : ret;
+    }
+    if (typeof window !== 'undefined') {
+      getComputedStyleX = window.getComputedStyle ? _getComputedStyle : _getComputedStyleIE;
+    }
+    function getOffsetDirection(dir, option) {
+      if (dir === 'left') {
+        return option.useCssRight ? 'right' : dir;
+      }
+      return option.useCssBottom ? 'bottom' : dir;
+    }
+    function oppositeOffsetDirection(dir) {
+      if (dir === 'left') {
+        return 'right';
+      } else if (dir === 'right') {
+        return 'left';
+      } else if (dir === 'top') {
+        return 'bottom';
+      } else if (dir === 'bottom') {
+        return 'top';
+      }
+    }
+
+    // 设置 elem 相对 elem.ownerDocument 的坐标
+    function setLeftTop(elem, offset, option) {
+      // set position first, in-case top/left are set even on static elem
+      if (css(elem, 'position') === 'static') {
+        elem.style.position = 'relative';
+      }
+      var presetH = -999;
+      var presetV = -999;
+      var horizontalProperty = getOffsetDirection('left', option);
+      var verticalProperty = getOffsetDirection('top', option);
+      var oppositeHorizontalProperty = oppositeOffsetDirection(horizontalProperty);
+      var oppositeVerticalProperty = oppositeOffsetDirection(verticalProperty);
+      if (horizontalProperty !== 'left') {
+        presetH = 999;
+      }
+      if (verticalProperty !== 'top') {
+        presetV = 999;
+      }
+      var originalTransition = '';
+      var originalOffset = getOffset(elem);
+      if ('left' in offset || 'top' in offset) {
+        originalTransition = getTransitionProperty(elem) || '';
+        setTransitionProperty(elem, 'none');
+      }
+      if ('left' in offset) {
+        elem.style[oppositeHorizontalProperty] = '';
+        elem.style[horizontalProperty] = "".concat(presetH, "px");
+      }
+      if ('top' in offset) {
+        elem.style[oppositeVerticalProperty] = '';
+        elem.style[verticalProperty] = "".concat(presetV, "px");
+      }
+      // force relayout
+      forceRelayout(elem);
+      var old = getOffset(elem);
+      var originalStyle = {};
+      for (var key in offset) {
+        if (offset.hasOwnProperty(key)) {
+          var dir = getOffsetDirection(key, option);
+          var preset = key === 'left' ? presetH : presetV;
+          var off = originalOffset[key] - old[key];
+          if (dir === key) {
+            originalStyle[dir] = preset + off;
+          } else {
+            originalStyle[dir] = preset - off;
+          }
+        }
+      }
+      css(elem, originalStyle);
+      // force relayout
+      forceRelayout(elem);
+      if ('left' in offset || 'top' in offset) {
+        setTransitionProperty(elem, originalTransition);
+      }
+      var ret = {};
+      for (var _key in offset) {
+        if (offset.hasOwnProperty(_key)) {
+          var _dir = getOffsetDirection(_key, option);
+          var _off = offset[_key] - originalOffset[_key];
+          if (_key === _dir) {
+            ret[_dir] = originalStyle[_dir] + _off;
+          } else {
+            ret[_dir] = originalStyle[_dir] - _off;
+          }
+        }
+      }
+      css(elem, ret);
+    }
+    function setTransform$1(elem, offset) {
+      var originalOffset = getOffset(elem);
+      var originalXY = getTransformXY(elem);
+      var resultXY = {
+        x: originalXY.x,
+        y: originalXY.y
+      };
+      if ('left' in offset) {
+        resultXY.x = originalXY.x + offset.left - originalOffset.left;
+      }
+      if ('top' in offset) {
+        resultXY.y = originalXY.y + offset.top - originalOffset.top;
+      }
+      setTransformXY(elem, resultXY);
+    }
+    function setOffset(elem, offset, option) {
+      if (option.ignoreShake) {
+        var oriOffset = getOffset(elem);
+        var oLeft = oriOffset.left.toFixed(0);
+        var oTop = oriOffset.top.toFixed(0);
+        var tLeft = offset.left.toFixed(0);
+        var tTop = offset.top.toFixed(0);
+        if (oLeft === tLeft && oTop === tTop) {
+          return;
+        }
+      }
+      if (option.useCssRight || option.useCssBottom) {
+        setLeftTop(elem, offset, option);
+      } else if (option.useCssTransform && getTransformName() in document.body.style) {
+        setTransform$1(elem, offset);
+      } else {
+        setLeftTop(elem, offset, option);
+      }
+    }
+    function each(arr, fn) {
+      for (var i = 0; i < arr.length; i++) {
+        fn(arr[i]);
+      }
+    }
+    function isBorderBoxFn(elem) {
+      return getComputedStyleX(elem, 'boxSizing') === 'border-box';
+    }
+    var BOX_MODELS = ['margin', 'border', 'padding'];
+    var CONTENT_INDEX = -1;
+    var PADDING_INDEX = 2;
+    var BORDER_INDEX = 1;
+    var MARGIN_INDEX = 0;
+    function swap(elem, options, callback) {
+      var old = {};
+      var style = elem.style;
+      var name;
+
+      // Remember the old values, and insert the new ones
+      for (name in options) {
+        if (options.hasOwnProperty(name)) {
+          old[name] = style[name];
+          style[name] = options[name];
+        }
+      }
+      callback.call(elem);
+
+      // Revert the old values
+      for (name in options) {
+        if (options.hasOwnProperty(name)) {
+          style[name] = old[name];
+        }
+      }
+    }
+    function getPBMWidth(elem, props, which) {
+      var value = 0;
+      var prop;
+      var j;
+      var i;
+      for (j = 0; j < props.length; j++) {
+        prop = props[j];
+        if (prop) {
+          for (i = 0; i < which.length; i++) {
+            var cssProp = void 0;
+            if (prop === 'border') {
+              cssProp = "".concat(prop).concat(which[i], "Width");
+            } else {
+              cssProp = prop + which[i];
+            }
+            value += parseFloat(getComputedStyleX(elem, cssProp)) || 0;
+          }
+        }
+      }
+      return value;
+    }
+    var domUtils = {
+      getParent: function getParent(element) {
+        var parent = element;
+        do {
+          if (parent.nodeType === 11 && parent.host) {
+            parent = parent.host;
+          } else {
+            parent = parent.parentNode;
+          }
+        } while (parent && parent.nodeType !== 1 && parent.nodeType !== 9);
+        return parent;
+      }
+    };
+    each(['Width', 'Height'], function (name) {
+      domUtils["doc".concat(name)] = function (refWin) {
+        var d = refWin.document;
+        return Math.max(
+        // firefox chrome documentElement.scrollHeight< body.scrollHeight
+        // ie standard mode : documentElement.scrollHeight> body.scrollHeight
+        d.documentElement["scroll".concat(name)],
+        // quirks : documentElement.scrollHeight 最大等于可视窗口多一点？
+        d.body["scroll".concat(name)], domUtils["viewport".concat(name)](d));
+      };
+      domUtils["viewport".concat(name)] = function (win) {
+        // pc browser includes scrollbar in window.innerWidth
+        var prop = "client".concat(name);
+        var doc = win.document;
+        var body = doc.body;
+        var documentElement = doc.documentElement;
+        var documentElementProp = documentElement[prop];
+        // 标准模式取 documentElement
+        // backcompat 取 body
+        return doc.compatMode === 'CSS1Compat' && documentElementProp || body && body[prop] || documentElementProp;
+      };
+    });
+
+    /*
+     得到元素的大小信息
+     @param elem
+     @param name
+     @param {String} [extra]  'padding' : (css width) + padding
+     'border' : (css width) + padding + border
+     'margin' : (css width) + padding + border + margin
+     */
+    function getWH(elem, name, ex) {
+      var extra = ex;
+      if (isWindow(elem)) {
+        return name === 'width' ? domUtils.viewportWidth(elem) : domUtils.viewportHeight(elem);
+      } else if (elem.nodeType === 9) {
+        return name === 'width' ? domUtils.docWidth(elem) : domUtils.docHeight(elem);
+      }
+      var which = name === 'width' ? ['Left', 'Right'] : ['Top', 'Bottom'];
+      var borderBoxValue = name === 'width' ? Math.floor(elem.getBoundingClientRect().width) : Math.floor(elem.getBoundingClientRect().height);
+      var isBorderBox = isBorderBoxFn(elem);
+      var cssBoxValue = 0;
+      if (borderBoxValue === null || borderBoxValue === undefined || borderBoxValue <= 0) {
+        borderBoxValue = undefined;
+        // Fall back to computed then un computed css if necessary
+        cssBoxValue = getComputedStyleX(elem, name);
+        if (cssBoxValue === null || cssBoxValue === undefined || Number(cssBoxValue) < 0) {
+          cssBoxValue = elem.style[name] || 0;
+        }
+        // Normalize '', auto, and prepare for extra
+        cssBoxValue = Math.floor(parseFloat(cssBoxValue)) || 0;
+      }
+      if (extra === undefined) {
+        extra = isBorderBox ? BORDER_INDEX : CONTENT_INDEX;
+      }
+      var borderBoxValueOrIsBorderBox = borderBoxValue !== undefined || isBorderBox;
+      var val = borderBoxValue || cssBoxValue;
+      if (extra === CONTENT_INDEX) {
+        if (borderBoxValueOrIsBorderBox) {
+          return val - getPBMWidth(elem, ['border', 'padding'], which);
+        }
+        return cssBoxValue;
+      } else if (borderBoxValueOrIsBorderBox) {
+        if (extra === BORDER_INDEX) {
+          return val;
+        }
+        return val + (extra === PADDING_INDEX ? -getPBMWidth(elem, ['border'], which) : getPBMWidth(elem, ['margin'], which));
+      }
+      return cssBoxValue + getPBMWidth(elem, BOX_MODELS.slice(extra), which);
+    }
+    var cssShow = {
+      position: 'absolute',
+      visibility: 'hidden',
+      display: 'block'
+    };
+
+    // fix #119 : https://github.com/kissyteam/kissy/issues/119
+    function getWHIgnoreDisplay() {
+      for (var _len = arguments.length, args = new Array(_len), _key2 = 0; _key2 < _len; _key2++) {
+        args[_key2] = arguments[_key2];
+      }
+      var val;
+      var elem = args[0];
+      // in case elem is window
+      // elem.offsetWidth === undefined
+      if (elem.offsetWidth !== 0) {
+        val = getWH.apply(undefined, args);
+      } else {
+        swap(elem, cssShow, function () {
+          val = getWH.apply(undefined, args);
+        });
+      }
+      return val;
+    }
+    each(['width', 'height'], function (name) {
+      var first = name.charAt(0).toUpperCase() + name.slice(1);
+      domUtils["outer".concat(first)] = function (el, includeMargin) {
+        return el && getWHIgnoreDisplay(el, name, includeMargin ? MARGIN_INDEX : BORDER_INDEX);
+      };
+      var which = name === 'width' ? ['Left', 'Right'] : ['Top', 'Bottom'];
+      domUtils[name] = function (elem, v) {
+        var val = v;
+        if (val !== undefined) {
+          if (elem) {
+            var isBorderBox = isBorderBoxFn(elem);
+            if (isBorderBox) {
+              val += getPBMWidth(elem, ['padding', 'border'], which);
+            }
+            return css(elem, name, val);
+          }
+          return undefined;
+        }
+        return elem && getWHIgnoreDisplay(elem, name, CONTENT_INDEX);
+      };
+    });
+    function mix$1(to, from) {
+      for (var i in from) {
+        if (from.hasOwnProperty(i)) {
+          to[i] = from[i];
+        }
+      }
+      return to;
+    }
+    var utils = {
+      getWindow: function getWindow(node) {
+        if (node && node.document && node.setTimeout) {
+          return node;
+        }
+        var doc = node.ownerDocument || node;
+        return doc.defaultView || doc.parentWindow;
+      },
+      getDocument: getDocument,
+      offset: function offset(el, value, option) {
+        if (typeof value !== 'undefined') {
+          setOffset(el, value, option || {});
+        } else {
+          return getOffset(el);
+        }
+      },
+      isWindow: isWindow,
+      each: each,
+      css: css,
+      clone: function clone(obj) {
+        var i;
+        var ret = {};
+        for (i in obj) {
+          if (obj.hasOwnProperty(i)) {
+            ret[i] = obj[i];
+          }
+        }
+        var overflow = obj.overflow;
+        if (overflow) {
+          for (i in obj) {
+            if (obj.hasOwnProperty(i)) {
+              ret.overflow[i] = obj.overflow[i];
+            }
+          }
+        }
+        return ret;
+      },
+      mix: mix$1,
+      getWindowScrollLeft: function getWindowScrollLeft(w) {
+        return getScrollLeft(w);
+      },
+      getWindowScrollTop: function getWindowScrollTop(w) {
+        return getScrollTop(w);
+      },
+      merge: function merge() {
+        var ret = {};
+        for (var i = 0; i < arguments.length; i++) {
+          utils.mix(ret, i < 0 || arguments.length <= i ? undefined : arguments[i]);
+        }
+        return ret;
+      },
+      viewportWidth: 0,
+      viewportHeight: 0
+    };
+    mix$1(utils, domUtils);
+
+    /**
+     * 得到会导致元素显示不全的祖先元素
+     */
+    var getParent = utils.getParent;
+    function getOffsetParent(element) {
+      if (utils.isWindow(element) || element.nodeType === 9) {
+        return null;
+      }
+      // ie 这个也不是完全可行
+      /*
+       <div style="width: 50px;height: 100px;overflow: hidden">
+       <div style="width: 50px;height: 100px;position: relative;" id="d6">
+       元素 6 高 100px 宽 50px<br/>
+       </div>
+       </div>
+       */
+      // element.offsetParent does the right thing in ie7 and below. Return parent with layout!
+      //  In other browsers it only includes elements with position absolute, relative or
+      // fixed, not elements with overflow set to auto or scroll.
+      //        if (UA.ie && ieMode < 8) {
+      //            return element.offsetParent;
+      //        }
+      // 统一的 offsetParent 方法
+      var doc = utils.getDocument(element);
+      var body = doc.body;
+      var parent;
+      var positionStyle = utils.css(element, 'position');
+      var skipStatic = positionStyle === 'fixed' || positionStyle === 'absolute';
+      if (!skipStatic) {
+        return element.nodeName.toLowerCase() === 'html' ? null : getParent(element);
+      }
+      for (parent = getParent(element); parent && parent !== body && parent.nodeType !== 9; parent = getParent(parent)) {
+        positionStyle = utils.css(parent, 'position');
+        if (positionStyle !== 'static') {
+          return parent;
+        }
+      }
+      return null;
+    }
+
+    var getParent$1 = utils.getParent;
+    function isAncestorFixed(element) {
+      if (utils.isWindow(element) || element.nodeType === 9) {
+        return false;
+      }
+      var doc = utils.getDocument(element);
+      var body = doc.body;
+      var parent = null;
+      for (parent = getParent$1(element);
+      // 修复元素位于 document.documentElement 下导致崩溃问题
+      parent && parent !== body && parent !== doc; parent = getParent$1(parent)) {
+        var positionStyle = utils.css(parent, 'position');
+        if (positionStyle === 'fixed') {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    /**
+     * 获得元素的显示部分的区域
+     */
+    function getVisibleRectForElement(element, alwaysByViewport) {
+      var visibleRect = {
+        left: 0,
+        right: Infinity,
+        top: 0,
+        bottom: Infinity
+      };
+      var el = getOffsetParent(element);
+      var doc = utils.getDocument(element);
+      var win = doc.defaultView || doc.parentWindow;
+      var body = doc.body;
+      var documentElement = doc.documentElement;
+
+      // Determine the size of the visible rect by climbing the dom accounting for
+      // all scrollable containers.
+      while (el) {
+        // clientWidth is zero for inline block elements in ie.
+        if ((navigator.userAgent.indexOf('MSIE') === -1 || el.clientWidth !== 0) &&
+        // body may have overflow set on it, yet we still get the entire
+        // viewport. In some browsers, el.offsetParent may be
+        // document.documentElement, so check for that too.
+        el !== body && el !== documentElement && utils.css(el, 'overflow') !== 'visible') {
+          var pos = utils.offset(el);
+          // add border
+          pos.left += el.clientLeft;
+          pos.top += el.clientTop;
+          visibleRect.top = Math.max(visibleRect.top, pos.top);
+          visibleRect.right = Math.min(visibleRect.right,
+          // consider area without scrollBar
+          pos.left + el.clientWidth);
+          visibleRect.bottom = Math.min(visibleRect.bottom, pos.top + el.clientHeight);
+          visibleRect.left = Math.max(visibleRect.left, pos.left);
+        } else if (el === body || el === documentElement) {
+          break;
+        }
+        el = getOffsetParent(el);
+      }
+
+      // Set element position to fixed
+      // make sure absolute element itself don't affect it's visible area
+      // https://github.com/ant-design/ant-design/issues/7601
+      var originalPosition = null;
+      if (!utils.isWindow(element) && element.nodeType !== 9) {
+        originalPosition = element.style.position;
+        var position = utils.css(element, 'position');
+        if (position === 'absolute') {
+          element.style.position = 'fixed';
+        }
+      }
+      var scrollX = utils.getWindowScrollLeft(win);
+      var scrollY = utils.getWindowScrollTop(win);
+      var viewportWidth = utils.viewportWidth(win);
+      var viewportHeight = utils.viewportHeight(win);
+      var documentWidth = documentElement.scrollWidth;
+      var documentHeight = documentElement.scrollHeight;
+
+      // scrollXXX on html is sync with body which means overflow: hidden on body gets wrong scrollXXX.
+      // We should cut this ourself.
+      var bodyStyle = window.getComputedStyle(body);
+      if (bodyStyle.overflowX === 'hidden') {
+        documentWidth = win.innerWidth;
+      }
+      if (bodyStyle.overflowY === 'hidden') {
+        documentHeight = win.innerHeight;
+      }
+
+      // Reset element position after calculate the visible area
+      if (element.style) {
+        element.style.position = originalPosition;
+      }
+      if (alwaysByViewport || isAncestorFixed(element)) {
+        // Clip by viewport's size.
+        visibleRect.left = Math.max(visibleRect.left, scrollX);
+        visibleRect.top = Math.max(visibleRect.top, scrollY);
+        visibleRect.right = Math.min(visibleRect.right, scrollX + viewportWidth);
+        visibleRect.bottom = Math.min(visibleRect.bottom, scrollY + viewportHeight);
+      } else {
+        // Clip by document's size.
+        var maxVisibleWidth = Math.max(documentWidth, scrollX + viewportWidth);
+        visibleRect.right = Math.min(visibleRect.right, maxVisibleWidth);
+        var maxVisibleHeight = Math.max(documentHeight, scrollY + viewportHeight);
+        visibleRect.bottom = Math.min(visibleRect.bottom, maxVisibleHeight);
+      }
+      return visibleRect.top >= 0 && visibleRect.left >= 0 && visibleRect.bottom > visibleRect.top && visibleRect.right > visibleRect.left ? visibleRect : null;
+    }
+
+    function adjustForViewport(elFuturePos, elRegion, visibleRect, overflow) {
+      var pos = utils.clone(elFuturePos);
+      var size = {
+        width: elRegion.width,
+        height: elRegion.height
+      };
+      if (overflow.adjustX && pos.left < visibleRect.left) {
+        pos.left = visibleRect.left;
+      }
+
+      // Left edge inside and right edge outside viewport, try to resize it.
+      if (overflow.resizeWidth && pos.left >= visibleRect.left && pos.left + size.width > visibleRect.right) {
+        size.width -= pos.left + size.width - visibleRect.right;
+      }
+
+      // Right edge outside viewport, try to move it.
+      if (overflow.adjustX && pos.left + size.width > visibleRect.right) {
+        // 保证左边界和可视区域左边界对齐
+        pos.left = Math.max(visibleRect.right - size.width, visibleRect.left);
+      }
+
+      // Top edge outside viewport, try to move it.
+      if (overflow.adjustY && pos.top < visibleRect.top) {
+        pos.top = visibleRect.top;
+      }
+
+      // Top edge inside and bottom edge outside viewport, try to resize it.
+      if (overflow.resizeHeight && pos.top >= visibleRect.top && pos.top + size.height > visibleRect.bottom) {
+        size.height -= pos.top + size.height - visibleRect.bottom;
+      }
+
+      // Bottom edge outside viewport, try to move it.
+      if (overflow.adjustY && pos.top + size.height > visibleRect.bottom) {
+        // 保证上边界和可视区域上边界对齐
+        pos.top = Math.max(visibleRect.bottom - size.height, visibleRect.top);
+      }
+      return utils.mix(pos, size);
+    }
+
+    function getRegion(node) {
+      var offset;
+      var w;
+      var h;
+      if (!utils.isWindow(node) && node.nodeType !== 9) {
+        offset = utils.offset(node);
+        w = utils.outerWidth(node);
+        h = utils.outerHeight(node);
+      } else {
+        var win = utils.getWindow(node);
+        offset = {
+          left: utils.getWindowScrollLeft(win),
+          top: utils.getWindowScrollTop(win)
+        };
+        w = utils.viewportWidth(win);
+        h = utils.viewportHeight(win);
+      }
+      offset.width = w;
+      offset.height = h;
+      return offset;
+    }
+
+    /**
+     * 获取 node 上的 align 对齐点 相对于页面的坐标
+     */
+
+    function getAlignOffset(region, align) {
+      var V = align.charAt(0);
+      var H = align.charAt(1);
+      var w = region.width;
+      var h = region.height;
+      var x = region.left;
+      var y = region.top;
+      if (V === 'c') {
+        y += h / 2;
+      } else if (V === 'b') {
+        y += h;
+      }
+      if (H === 'c') {
+        x += w / 2;
+      } else if (H === 'r') {
+        x += w;
+      }
+      return {
+        left: x,
+        top: y
+      };
+    }
+
+    function getElFuturePos(elRegion, refNodeRegion, points, offset, targetOffset) {
+      var p1 = getAlignOffset(refNodeRegion, points[1]);
+      var p2 = getAlignOffset(elRegion, points[0]);
+      var diff = [p2.left - p1.left, p2.top - p1.top];
+      return {
+        left: Math.round(elRegion.left - diff[0] + offset[0] - targetOffset[0]),
+        top: Math.round(elRegion.top - diff[1] + offset[1] - targetOffset[1])
+      };
+    }
+
+    /**
+     * align dom node flexibly
+     * @author yiminghe@gmail.com
+     */
+
+    // http://yiminghe.iteye.com/blog/1124720
+
+    function isFailX(elFuturePos, elRegion, visibleRect) {
+      return elFuturePos.left < visibleRect.left || elFuturePos.left + elRegion.width > visibleRect.right;
+    }
+    function isFailY(elFuturePos, elRegion, visibleRect) {
+      return elFuturePos.top < visibleRect.top || elFuturePos.top + elRegion.height > visibleRect.bottom;
+    }
+    function isCompleteFailX(elFuturePos, elRegion, visibleRect) {
+      return elFuturePos.left > visibleRect.right || elFuturePos.left + elRegion.width < visibleRect.left;
+    }
+    function isCompleteFailY(elFuturePos, elRegion, visibleRect) {
+      return elFuturePos.top > visibleRect.bottom || elFuturePos.top + elRegion.height < visibleRect.top;
+    }
+    function flip(points, reg, map) {
+      var ret = [];
+      utils.each(points, function (p) {
+        ret.push(p.replace(reg, function (m) {
+          return map[m];
+        }));
+      });
+      return ret;
+    }
+    function flipOffset(offset, index) {
+      offset[index] = -offset[index];
+      return offset;
+    }
+    function convertOffset(str, offsetLen) {
+      var n;
+      if (/%$/.test(str)) {
+        n = parseInt(str.substring(0, str.length - 1), 10) / 100 * offsetLen;
+      } else {
+        n = parseInt(str, 10);
+      }
+      return n || 0;
+    }
+    function normalizeOffset(offset, el) {
+      offset[0] = convertOffset(offset[0], el.width);
+      offset[1] = convertOffset(offset[1], el.height);
+    }
+
+    /**
+     * @param el
+     * @param tgtRegion 参照节点所占的区域: { left, top, width, height }
+     * @param align
+     */
+    function doAlign(el, tgtRegion, align, isTgtRegionVisible) {
+      var points = align.points;
+      var offset = align.offset || [0, 0];
+      var targetOffset = align.targetOffset || [0, 0];
+      var overflow = align.overflow;
+      var source = align.source || el;
+      offset = [].concat(offset);
+      targetOffset = [].concat(targetOffset);
+      overflow = overflow || {};
+      var newOverflowCfg = {};
+      var fail = 0;
+      var alwaysByViewport = !!(overflow && overflow.alwaysByViewport);
+      // 当前节点可以被放置的显示区域
+      var visibleRect = getVisibleRectForElement(source, alwaysByViewport);
+      // 当前节点所占的区域, left/top/width/height
+      var elRegion = getRegion(source);
+      // 将 offset 转换成数值，支持百分比
+      normalizeOffset(offset, elRegion);
+      normalizeOffset(targetOffset, tgtRegion);
+      // 当前节点将要被放置的位置
+      var elFuturePos = getElFuturePos(elRegion, tgtRegion, points, offset, targetOffset);
+      // 当前节点将要所处的区域
+      var newElRegion = utils.merge(elRegion, elFuturePos);
+
+      // 如果可视区域不能完全放置当前节点时允许调整
+      if (visibleRect && (overflow.adjustX || overflow.adjustY) && isTgtRegionVisible) {
+        if (overflow.adjustX) {
+          // 如果横向不能放下
+          if (isFailX(elFuturePos, elRegion, visibleRect)) {
+            // 对齐位置反下
+            var newPoints = flip(points, /[lr]/gi, {
+              l: 'r',
+              r: 'l'
             });
+            // 偏移量也反下
+            var newOffset = flipOffset(offset, 0);
+            var newTargetOffset = flipOffset(targetOffset, 0);
+            var newElFuturePos = getElFuturePos(elRegion, tgtRegion, newPoints, newOffset, newTargetOffset);
+            if (!isCompleteFailX(newElFuturePos, elRegion, visibleRect)) {
+              fail = 1;
+              points = newPoints;
+              offset = newOffset;
+              targetOffset = newTargetOffset;
+            }
+          }
+        }
+        if (overflow.adjustY) {
+          // 如果纵向不能放下
+          if (isFailY(elFuturePos, elRegion, visibleRect)) {
+            // 对齐位置反下
+            var _newPoints = flip(points, /[tb]/gi, {
+              t: 'b',
+              b: 't'
+            });
+            // 偏移量也反下
+            var _newOffset = flipOffset(offset, 1);
+            var _newTargetOffset = flipOffset(targetOffset, 1);
+            var _newElFuturePos = getElFuturePos(elRegion, tgtRegion, _newPoints, _newOffset, _newTargetOffset);
+            if (!isCompleteFailY(_newElFuturePos, elRegion, visibleRect)) {
+              fail = 1;
+              points = _newPoints;
+              offset = _newOffset;
+              targetOffset = _newTargetOffset;
+            }
+          }
+        }
+
+        // 如果失败，重新计算当前节点将要被放置的位置
+        if (fail) {
+          elFuturePos = getElFuturePos(elRegion, tgtRegion, points, offset, targetOffset);
+          utils.mix(newElRegion, elFuturePos);
+        }
+        var isStillFailX = isFailX(elFuturePos, elRegion, visibleRect);
+        var isStillFailY = isFailY(elFuturePos, elRegion, visibleRect);
+        // 检查反下后的位置是否可以放下了，如果仍然放不下：
+        // 1. 复原修改过的定位参数
+        if (isStillFailX || isStillFailY) {
+          var _newPoints2 = points;
+
+          // 重置对应部分的翻转逻辑
+          if (isStillFailX) {
+            _newPoints2 = flip(points, /[lr]/gi, {
+              l: 'r',
+              r: 'l'
+            });
+          }
+          if (isStillFailY) {
+            _newPoints2 = flip(points, /[tb]/gi, {
+              t: 'b',
+              b: 't'
+            });
+          }
+          points = _newPoints2;
+          offset = align.offset || [0, 0];
+          targetOffset = align.targetOffset || [0, 0];
+        }
+        // 2. 只有指定了可以调整当前方向才调整
+        newOverflowCfg.adjustX = overflow.adjustX && isStillFailX;
+        newOverflowCfg.adjustY = overflow.adjustY && isStillFailY;
+
+        // 确实要调整，甚至可能会调整高度宽度
+        if (newOverflowCfg.adjustX || newOverflowCfg.adjustY) {
+          newElRegion = adjustForViewport(elFuturePos, elRegion, visibleRect, newOverflowCfg);
+        }
+      }
+
+      // need judge to in case set fixed with in css on height auto element
+      if (newElRegion.width !== elRegion.width) {
+        utils.css(source, 'width', utils.width(source) + newElRegion.width - elRegion.width);
+      }
+      if (newElRegion.height !== elRegion.height) {
+        utils.css(source, 'height', utils.height(source) + newElRegion.height - elRegion.height);
+      }
+
+      // https://github.com/kissyteam/kissy/issues/190
+      // 相对于屏幕位置没变，而 left/top 变了
+      // 例如 <div 'relative'><el absolute></div>
+      utils.offset(source, {
+        left: newElRegion.left,
+        top: newElRegion.top
+      }, {
+        useCssRight: align.useCssRight,
+        useCssBottom: align.useCssBottom,
+        useCssTransform: align.useCssTransform,
+        ignoreShake: align.ignoreShake
+      });
+      return {
+        points: points,
+        offset: offset,
+        targetOffset: targetOffset,
+        overflow: newOverflowCfg
+      };
+    }
+    /**
+     *  2012-04-26 yiminghe@gmail.com
+     *   - 优化智能对齐算法
+     *   - 慎用 resizeXX
+     *
+     *  2011-07-13 yiminghe@gmail.com note:
+     *   - 增加智能对齐，以及大小调整选项
+     **/
+
+    function isOutOfVisibleRect(target, alwaysByViewport) {
+      var visibleRect = getVisibleRectForElement(target, alwaysByViewport);
+      var targetRegion = getRegion(target);
+      return !visibleRect || targetRegion.left + targetRegion.width <= visibleRect.left || targetRegion.top + targetRegion.height <= visibleRect.top || targetRegion.left >= visibleRect.right || targetRegion.top >= visibleRect.bottom;
+    }
+    function alignElement(el, refNode, align) {
+      var target = align.target || refNode;
+      var refNodeRegion = getRegion(target);
+      var isTargetNotOutOfVisible = !isOutOfVisibleRect(target, align.overflow && align.overflow.alwaysByViewport);
+      return doAlign(el, refNodeRegion, align, isTargetNotOutOfVisible);
+    }
+    alignElement.__getOffsetParent = getOffsetParent;
+    alignElement.__getVisibleRectForElement = getVisibleRectForElement;
+
+    const triggerClass = getPrefixCls('trigger');
+    const triggerHiddenClass = getPrefixCls('trigger-hidden');
+    // 用第二个参数的位置去对齐第一个参数的位置
+    const placementMap = {
+        topLeft: ['bl', 'tl'],
+        topRight: ['br', 'tr'],
+        bottomLeft: ['tl', 'bl'],
+        bottomRight: ['tr', 'br']
+    };
+    // 第一个参数是sourceNode的x轴偏移量，第二个参数是sourceNode的y轴偏移量
+    const placementOffsetMap = {
+        topLeft: [0, -4],
+        topRight: [0, -4],
+        bottomLeft: [0, 4],
+        bottomRight: [0, 4]
+    };
+    class Trigger extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            placement: { type: String },
+            isOpen: { type: Boolean },
+            destroyOnHide: { type: Boolean, optional: true },
+            triggerNode: { type: Object, optional: true },
+            getPopupContainer: { type: Function, optional: true },
+            getStyle: { type: Function, optional: true },
+            onScroll: { type: Function, optional: true },
+            ...baseProps
+        };
+        static defaultProps = {
+            destroyOnHide: false
+        };
+        static contentTemplate = `
+<div t-ref="wrapperRef" t-att-class="getClass()" t-portal="getPopupContainer()" t-att-style="getStyle()">
+    <t t-slot="default"/>
+</div>  
+    `;
+        static template = owl.xml `
+<t>
+    <t t-if="!props.destroyOnHide">
+        ${Trigger.contentTemplate}
+    </t>
+    <t t-else="">
+        <t t-if="state.isShow">
+            ${Trigger.contentTemplate}
+        </t>
+    </t>
+</t>
+    `;
+        wrapperRef = owl.useRef('wrapperRef');
+        state = owl.useState({
+            isShow: false // 用于控制隐藏时销毁
+        });
+        lastIsOpen = false; // 最后一次是打开还是关闭，用来控制是否需要展示fade动画，因为第一次打开始终需要展示动画
+        getClass() {
+            const { className, isOpen } = this.props;
+            const notShowFade = isOpen && this.lastIsOpen;
+            return classNames(triggerClass, className, {
+                [`${triggerClass}-${isOpen ? 'fadein' : 'fadeout'}`]: !notShowFade
+            });
+        }
+        getPopupContainer() {
+            return this.props.getPopupContainer?.(this.props.triggerNode) || 'body';
+        }
+        getStyle() {
+            // 初始状态强制设置为隐藏
+            if (!this.props.triggerNode) {
+                return stylesToString({
+                    'display': 'none'
+                });
+            }
+            return this.props.getStyle?.(this.props.triggerNode) || undefined;
+        }
+        /**
+         * 对齐
+         * @protected
+         */
+        align() {
+            const { triggerNode, placement } = this.props;
+            if (this.wrapperRef.el && triggerNode) {
+                const alignConfig = {
+                    points: placementMap[placement],
+                    offset: placementOffsetMap[placement],
+                    targetOffset: ['0', '0'] // 同offset，不过是针对targetNode的
+                };
+                alignElement(this.wrapperRef.el, triggerNode, alignConfig);
+            }
+        }
+        setup() {
+            useImperativeHandle(() => ({
+                wrapperRef: this.wrapperRef,
+                align: this.align.bind(this)
+            }), () => []);
+            useEventListener(this.wrapperRef, 'animationend', (event) => {
+                // 动画完成后添加hiddenclass，使不占据dom空间
+                if (event.animationName === 'fadeout') {
+                    this.wrapperRef.el?.classList.add(triggerHiddenClass);
+                    // 如果设置了隐藏时销毁，在动画完成后移除dom
+                    if (this.props.destroyOnHide) {
+                        this.state.isShow = false;
+                    }
+                }
+            });
+            useEventListener(this.wrapperRef, 'scroll', (event) => {
+                this.props.onScroll?.(event);
+            });
+            owl.useEffect(() => {
+                const { isOpen } = this.props;
+                if (isOpen) {
+                    this.state.isShow = true;
+                }
+            }, () => [this.props.isOpen]);
+            owl.useEffect(() => {
+                const { isOpen } = this.props;
+                this.lastIsOpen = isOpen;
+                if (isOpen) {
+                    // 打开时先移除hidden的class，否则display: none不能触发动画
+                    this.wrapperRef.el?.classList.remove(triggerHiddenClass);
+                }
+                this.align();
+            }, () => [this.wrapperRef.el, this.props.isOpen, this.props.triggerNode]);
+        }
+    }
+
+    /**
+     * 带搜索的指定列表项使用的state，根据搜索项过滤返回过滤后的列表项，提供全选和反选功能
+     * @param columns 初始列表项
+     * @param filter  筛选函数
+     * @param filterSort 排序对比函数
+     */
+    const useColsSearch = (columns, filter, filterSort) => {
+        /**
+         * 根据搜索值过滤列，匹配label，模糊匹配
+         * @param columns
+         * @param searchValue
+         */
+        const filterColumns = (columns, searchValue) => {
+            return columns.filter((c) => {
+                if (filter) {
+                    return filter(searchValue, c);
+                }
+                return c.label.indexOf(searchValue) !== -1;
+            });
+        };
+        const state = owl.useState({
+            columns: columns ?? [],
+            displayCols: [],
+            selectedValue: [],
+            searchValue: '',
+            allSelected: false
+        });
+        /**
+         * 根据当前已选中值进行全选或取消全选，都是针对当前搜索结果进行的操作
+         * @param isAll 全选或取消全选
+         */
+        const selectAll = (isAll) => {
+            const allValues = state.displayCols.map((v) => (v.value.toString()));
+            if (!state.searchValue) {
+                state.selectedValue = isAll ? allValues : [];
+            }
+            else {
+                // 已经被选中的值
+                const sourceSelectedValues = [...state.selectedValue];
+                // 全选求并集，取消全选求差集
+                const allIdsSet = new Set(allValues);
+                state.selectedValue = isAll
+                    ? Array.from(new Set(sourceSelectedValues.concat(allValues)))
+                    : sourceSelectedValues.filter(cid => !allIdsSet.has(cid));
+            }
+        };
+        owl.useEffect(() => {
+            let filterCols = filterColumns(state.columns, state.searchValue);
+            if (filterSort) {
+                filterCols = filterCols.sort(filterSort);
+            }
+            state.displayCols = filterCols;
+        }, () => [state.columns, state.searchValue]);
+        // 根据选中值和待选项判断是否全选
+        owl.useEffect(() => {
+            // displayCols和selectedValue的交集数量等于displayCols则为全选
+            const selectedSet = new Set(state.selectedValue);
+            const intersection = state.displayCols.filter((col) => selectedSet.has(String(col.value)));
+            state.allSelected = intersection.length >= state.displayCols.length;
+        }, () => [state.selectedValue, state.displayCols]);
+        return {
+            state,
+            selectAll
+        };
+    };
+
+    /**
+     * 提供可取消的timer
+     */
+    const useCancellableTimer = () => {
+        const timerState = owl.useState({
+            timer: undefined
+        });
+        const cancel = () => {
+            const { timer } = timerState;
+            if (timer) {
+                clearTimeout(timer);
+            }
+        };
+        const run = (handle, timeout) => {
+            cancel();
+            timerState.timer = setTimeout(() => {
+                handle();
+                timerState.timer = undefined;
+            }, timeout);
+        };
+        return {
+            run,
+            cancel
+        };
+    };
+
+    /**
+     * 使用ResizeObserver对元素尺寸进行观察，当元素尺寸发生变化时，执行回调函数，性能开销较小
+     * @param targetRef
+     * @param handle
+     */
+    const useResizeObserver = (targetRef, handle) => {
+        owl.useEffect(() => {
+            if (targetRef.el) {
+                const resizeObserver = new ResizeObserver((entries) => {
+                    entries.forEach((entry) => {
+                        handle(entry);
+                    });
+                });
+                // 开始观察目标元素
+                resizeObserver.observe(targetRef.el);
+                return () => {
+                    resizeObserver.disconnect();
+                };
+            }
+        }, () => [targetRef.el]);
+    };
+
+    var _closeSVG = "<svg class=\"icon\" viewBox=\"0 0 1024 1024\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"m563.8 512 262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9c-4.4 5.2-.7 13.1 6.1 13.1h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z\"/></svg>";
+
+    const closeSVG$1 = getSDSVG(_closeSVG, {
+        width: '1em',
+        height: '1em'
+    });
+    const overflowClass = getPrefixCls('overflow');
+    const displayTagClass = `${overflowClass}-display-span-tag`;
+    class Overflow extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            values: { type: Array },
+            options: { type: Array },
+            maxTagCount: { type: [Number, String], optional: true },
+            handleDelete: { type: Function, optional: true },
+            ...baseProps
+        };
+        static tagTemplate = (inner) => `
+<span t-att-class="classes.rest">
+    <span class="${displayTagClass}-container">
+        <span class="${displayTagClass}-label">
+            ${inner}
+        </span>
+    </span>
+</span>
+`;
+        static displayTemplate = (hasEvent) => `
+<t t-slot="tag" data="option">
+    <span class="${displayTagClass}">
+        <span class="${displayTagClass}-container">
+            <span class="${displayTagClass}-label">
+                <t t-esc="option.label"/>
+            </span>
+            <span class="${displayTagClass}-icon" ${hasEvent ?
+        't-on-click.stop="(event) => this.handleDelete(option)"' : ''} >${closeSVG$1}</span>
+        </span>
+    </span>
+</t>
+`;
+        static template = owl.xml `
+<t>
+    <t t-set="classes" t-value="getClass()"/>
+    <span t-ref="container" t-att-class="classes.container">
+        <t t-foreach="state.displayOptions" t-as="option" t-key="option.value">
+            ${Overflow.displayTemplate(true)}
+        </t> 
+        <t t-if="state.rest" >
+            ${Overflow.tagTemplate(`<t t-esc="'+' + state.rest + '...'"/>`)}
+        </t>
+        <span t-att-class="classes.suffix" t-ref="suffix">
+            <t t-slot="suffix"/>
+        </span>
+        
+        <t t-if="props.maxTagCount !== undefined">
+            <span t-ref="temp" t-att-class="classes.temp">
+                <t t-foreach="getWholeOptions()" t-as="option" t-key="option.value">
+                    ${Overflow.displayTemplate(false)}
+                </t> 
+            </span>
+            <span t-ref="overFlowTemp" t-att-class="classes.temp">
+                <t t-foreach="props.values" t-as="value" t-key="value_index">
+                    ${Overflow.tagTemplate(`<t t-esc="'+' + (value_index + 1) + '...'"/>`)}
+                </t> 
+            </span>
+        </t>
+    </span>
+</t>
+`;
+        containerRef = owl.useRef('container');
+        tempRef = owl.useRef('temp');
+        overFlowTempRef = owl.useRef('overFlowTemp');
+        containerSize = useSize('container');
+        suffixSize = useSize('suffix');
+        state = owl.useState({
+            displayMaxIndex: 0, // 超出显示时用于显示的索引
+            displayOptions: [], // 超出显示时用于显示的值
+            rest: undefined
+        });
+        getClass() {
+            return {
+                container: classNames(this.props.className, overflowClass, {
+                    [`${overflowClass}-responsive`]: this.props.maxTagCount === 'responsive'
+                }),
+                temp: classNames(this.props.className, `${overflowClass}-temp`),
+                rest: classNames(displayTagClass, `${overflowClass}-rest`),
+                suffix: `${overflowClass}-suffix`
+            };
+        }
+        isOverflow(index, targetWidth, searchWidth) {
+            const restIndex = Math.max(0, this.props.values.length - 1 - index);
+            const overFlowSpamWidth = this.overFlowTempRef.el?.children[restIndex].getBoundingClientRect().width || 0;
+            return targetWidth + overFlowSpamWidth + searchWidth >= this.containerSize.width;
+        }
+        handleDelete(option) {
+            this.props.handleDelete?.(option);
+        }
+        /**
+         * 所有应该显示的option，包含overflow部分
+         * @protected
+         */
+        getWholeOptions() {
+            const { values, options } = this.props;
+            return options.filter((c) => values.indexOf(c.value) !== -1);
+        }
+        setup() {
+            owl.useEffect(() => {
+                const { maxTagCount, values, options } = this.props;
+                if (isNumber(maxTagCount)) {
+                    this.state.displayMaxIndex = maxTagCount;
+                }
+                else if (maxTagCount === undefined) {
+                    this.state.displayMaxIndex = Math.max(0, this.props.values.length);
+                }
+                else if (this.tempRef.el && this.containerSize.width) {
+                    // 获取所有子元素
+                    const children = this.tempRef.el.children;
+                    // 初始化总宽度
+                    let totalWidth = 0;
+                    this.state.displayMaxIndex = values.length;
+                    for (let i = 0; i < values.length; i++) {
+                        // 获取子元素的宽度，不包括间隔和margin
+                        const childWidth = children[i].getBoundingClientRect().width;
+                        totalWidth += childWidth;
+                        let searchWidth = this.suffixSize.width || 0;
+                        // 如果超出或等于maxTagCount，跳出循环
+                        if (this.isOverflow(i, totalWidth, searchWidth)) {
+                            this.state.displayMaxIndex = i;
+                            break;
+                        }
+                    }
+                }
+                const displayValues = values.slice(0, this.state.displayMaxIndex);
+                this.state.displayOptions = options.filter((c) => displayValues.indexOf(c.value) !== -1);
+                // 计算剩余显示部分
+                const restIndex = Math.max(0, this.props.values.length - this.state.displayMaxIndex);
+                this.state.rest = restIndex > 0 ? restIndex : undefined;
+            }, () => [
+                this.tempRef.el, this.containerSize.width, this.suffixSize.width, this.props.values, this.props.options
+            ]);
+        }
+    }
+
+    const downSVG = getSDSVG(_downSVG, {
+        width: '1em',
+        height: '1em'
+    });
+    const searchSVG = getSDSVG(_searchSVG, {
+        width: '1em',
+        height: '1em'
+    });
+    const emptySVG = getSDSVG(_emptySVG, {
+        width: '64',
+        height: '41'
+    });
+    const loadingSVG = getSDSVG(_loadingSVG, {
+        width: '1em',
+        height: '1em'
+    });
+    const checkSVG = getSDSVG(_checkSVG, {
+        width: '1em',
+        height: '1em'
+    });
+    const closeSVG = getSDSVG(_closeSVG$1, {
+        width: '1em',
+        height: '1em'
+    });
+    const selectClass = getPrefixCls('select');
+    const selectIconClass = getPrefixCls('select-icon');
+    const selectRotateIconClass = getPrefixCls('select-rotate-icon');
+    const selectSelectorClass = getPrefixCls('select-selector');
+    const selectDropdownClass = getPrefixCls('select-dropdown');
+    const dropdownEmptyClass = getPrefixCls('select-dropdown-empty');
+    const selectDropdownItemWrapperClass = getPrefixCls('select-dropdown-item-wrapper');
+    // 需要额外包裹一层，因为item最外层有padding，点击事件到达不了，影响体验
+    const selectDropdownItemClass = getPrefixCls('select-dropdown-item');
+    const searchSpanClass = getPrefixCls('select-search-span');
+    const displaySpanClass = getPrefixCls('select-display-span');
+    class Select extends owl.Component {
+        static components = { List, Trigger, Overflow };
+        static props = {
+            className: { type: String, optional: true },
+            allowClear: { type: Boolean, optional: true },
+            autoClearSearchValue: { type: Boolean, optional: true },
+            getPopupContainer: { type: Function, optional: true },
+            placement: { type: String, optional: true },
+            listHeight: { type: Number, optional: true },
+            disabled: { type: Boolean, optional: true },
+            value: { type: [String, Array, Number], optional: true },
+            defaultValue: { type: [String, Array, Number], optional: true },
+            multiple: { type: Boolean, optional: true },
+            size: { type: String, optional: true },
+            placeholder: { type: String, optional: true },
+            bordered: { type: Boolean, optional: true },
+            defaultOpen: { type: Boolean, optional: true },
+            autoFocus: { type: Boolean, optional: true },
+            popupClassName: { type: String, optional: true },
+            popupMatchSelectWidth: { type: Boolean, optional: true },
+            showSearch: { type: Boolean, optional: true },
+            filterOption: { type: Function, optional: true },
+            filterSort: { type: Function, optional: true },
+            options: { type: Array },
+            loading: { type: Boolean, optional: true },
+            open: { type: Boolean, optional: true },
+            maxTagCount: { type: [Number, String], optional: true },
+            virtual: { type: Boolean, optional: true },
+            itemHeight: { type: [Number, Function], optional: true },
+            onSearch: { type: Function, optional: true },
+            onSelect: { type: Function, optional: true },
+            onDeselect: { type: Function, optional: true },
+            onClear: { type: Function, optional: true },
+            onDropdownVisibleChange: { type: Function, optional: true },
+            onFocus: { type: Function, optional: true },
+            onPopupScroll: { type: Function, optional: true },
+            ...baseProps
+        };
+        static defaultProps = {
+            autoClearSearchValue: true,
+            listHeight: 256,
+            virtual: false,
+            popupMatchSelectWidth: true,
+            multiple: false,
+            placement: 'bottomLeft'
+        };
+        state = owl.useState({
+            searchValue: '',
+            focus: this.props.autoFocus || false,
+            triggerNode: undefined,
+            multipleInputStyle: undefined
+        });
+        controllableState = useControllableState(this.props, {
+            value: this.props.defaultValue ?? this.props.multiple ? [] : undefined,
+            open: false
+        });
+        colsState = useColsSearch(this.props.options, this.props.filterOption, this.props.filterSort);
+        cancelableTimer = useCancellableTimer();
+        containerRef = owl.useRef('container');
+        searchTempRef = owl.useRef('searchTemp');
+        searchSpanRef = owl.useRef('searchSpan');
+        searchRef = owl.useRef('search');
+        triggerRef = useCompRef();
+        static template = owl.xml `
+<span t-ref="container" t-att-class="getClass()" t-on-click="onClickContainer">
+    <span class="${selectSelectorClass}">
+        <span t-if="showPlaceholder()" class="${selectSelectorClass}-placeholder"><t t-esc="props.placeholder"/></span>
+        <div class="${selectSelectorClass}-temp" t-ref="searchTemp"><t t-esc="state.searchValue"/></div>
+        <t t-set="searchClass" t-value="getSearchClass()"/>
+        <t t-if="props.multiple">
+            <Overflow slots="props.slots" className="'${selectSelectorClass}-tags'" values="controllableState.state.value" maxTagCount="props.maxTagCount" options="props.options" handleDelete.bind="handleDeleteChoice">
+                <t t-set-slot="suffix">
+                    <t t-if="props.showSearch">
+                        <span t-att-class="searchClass.search">
+                            <span t-ref="searchSpan">
+                                <input t-ref="search" t-on-input="onInput" t-att-value="state.searchValue" type="text"/>
+                            </span>
+                        </span>
+                    </t>
+                </t>
+            </Overflow>
+        </t>
+        <t t-else="">
+            <t t-if="props.showSearch">
+                <span t-att-class="searchClass.search"><input t-on-input="onInput" t-att-value="state.searchValue" type="text"/></span>
+            </t>
+            <t t-set="displayOption" t-value="getOption(controllableState.state.value)"/>
+            <span t-if="displayOption" t-att-class="searchClass.display">
+                <t t-slot="label" data="displayOption">
+                    <t t-esc="displayOption.label"/>
+                </t>
+            </span>
+        </t>
+    </span>
+    <Trigger ref="triggerRef" onScroll.bind="onScroll" className="getPopupClass()" isOpen="controllableState.state.open" triggerNode="state.triggerNode" 
+        getPopupContainer="props.getPopupContainer" getStyle.bind="getDropdownStyle" placement="props.placement">
+        <t t-if="colsState.state.displayCols.length === 0">
+            <t t-slot="empty">
+                <div class="${dropdownEmptyClass}">
+                    <div>${emptySVG}</div>
+                    <div>暂无数据</div>
+                </div>
+            </t>
+        </t>
+        <t t-else="">
+            <List dataSource="colsState.state.displayCols" itemClassName.bind="getItemClass" virtual="props.virtual" itemHeight="props.itemHeight" height="props.listHeight" onScroll.bind="onScroll">
+                <t t-set-slot="item" t-slot-scope="scope">
+                    <div class="${selectDropdownItemClass}" t-on-click.synthetic="() => this.handleChoice(scope.data)">
+                        <span>
+                            <t t-slot="label" data="scope.data">
+                                <t t-esc="scope.data.label"/>
+                            </t>
+                        </span>
+                        <span class="${selectDropdownItemClass}-icon" t-if="this.showSelectedSuffix(scope.data)">${checkSVG}</span>
+                    </div>
+                </t>
+            </List>        
+        </t>
+    </Trigger>
+    <span class="${selectIconClass}">
+        <t t-if="props.loading"><span class="${selectRotateIconClass}">${loadingSVG}</span></t>
+        <t t-elif="state.searchValue">${searchSVG}</t>
+        <t t-else="">${downSVG}</t>
+        
+        <span t-if="!props.disabled &amp;&amp; props.allowClear" class="${selectIconClass}-clear" t-on-click="handleClear">
+            ${closeSVG}
+        </span>
+    </span>
+ </span>   
+    `;
+        /**
+         * 判断是否显示placeholder的逻辑
+         * @protected
+         */
+        showPlaceholder() {
+            const { multiple } = this.props;
+            if (!!this.state.searchValue) {
+                return false;
+            }
+            if (!multiple) {
+                return !this.controllableState.state.value;
+            }
+            return this.controllableState.state.value.length === 0;
+        }
+        /**
+         * 搜索值变化时触发回调
+         * @param event
+         * @protected
+         */
+        onInput(event) {
+            const value = event.currentTarget.value;
+            this.state.searchValue = value;
+            this.colsState.state.searchValue = value;
+            this.props.onSearch?.(value);
+        }
+        /**
+         * 清空搜索值
+         * @protected
+         */
+        clear() {
+            this.state.searchValue = '';
+            this.colsState.state.searchValue = '';
+        }
+        /**
+         * 延时清空搜索值，但是会马上清空显示的值
+         * @protected
+         */
+        timerClear() {
+            // 先清空searchValue使展示正常
+            this.state.searchValue = '';
+            this.cancelableTimer.run(this.clear.bind(this), 1000);
+        }
+        /**
+         * 点击最外层容器时触发的回调
+         * @param event
+         * @protected
+         */
+        onClickContainer(event) {
+            if (!this.props.disabled) {
+                // 打开时如果有searchRef，则进行聚焦，仅multiple有用
+                this.searchRef.el?.focus();
+                // 如果已经open并且允许search，则不进行关闭
+                if (this.controllableState.state.open && this.props.showSearch) {
+                    return;
+                }
+                this.toggleOpen();
+                this.state.focus = true;
+                this.props.onFocus?.();
+            }
+        }
+        /**
+         * 下拉框的显示状态改变时触发
+         * @param open 是否显示
+         * @protected
+         */
+        onDropdownVisibleChange(open) {
+            this.controllableState.setState({
+                open
+            });
+            this.props.onDropdownVisibleChange?.(open);
+        }
+        /**
+         * 切换下拉框的显示状态
+         * @param force 切换状态
+         * @protected
+         */
+        toggleOpen(force) {
+            if (!this.props.disabled) {
+                this.onDropdownVisibleChange(force ?? !this.controllableState.state.open);
+                if (this.controllableState.state.open) {
+                    this.clear();
+                    this.cancelableTimer.cancel();
+                    this.state.triggerNode = this.containerRef.el;
+                }
+            }
+        }
+        /**
+         * select组件的样式类
+         * @protected
+         */
+        getClass() {
+            const { size, className, disabled, bordered } = this.props;
+            return classNames(className, selectClass, {
+                [`${selectClass}-borderless`]: !bordered,
+                [`${selectClass}-focus`]: this.state.focus,
+                [`${selectClass}-multiple`]: !!this.props.multiple,
+                [`${selectClass}-isOpen`]: this.controllableState.state.open,
+                [`${selectClass}-searchable`]: this.props.showSearch,
+                [`${selectClass}-disabled`]: !!disabled,
+                [`${selectClass}-sm`]: size === 'small',
+                [`${selectClass}-lg`]: size === 'large',
+                [`${selectClass}-vir`]: false
+            });
+        }
+        /**
+         * 搜索相关部分的样式
+         * @protected
+         */
+        getSearchClass() {
+            return {
+                search: classNames(searchSpanClass, {
+                    [`${searchSpanClass}-multiple`]: !!this.props.multiple
+                }),
+                display: classNames(displaySpanClass, {
+                    [`${selectClass}-v-hidden`]: !this.props.multiple && !!this.state.searchValue // 多选模式下不隐藏
+                })
+            };
+        }
+        /**
+         * 下拉框的class
+         * @protected
+         */
+        getPopupClass() {
+            return classNames(selectDropdownClass, this.props.popupClassName);
+        }
+        /**
+         * 选项的样式类
+         * @param item
+         * @param index
+         * @protected
+         */
+        getItemClass(item, index) {
+            if (!this.props.multiple) {
+                return classNames(selectDropdownItemWrapperClass, {
+                    [`${selectDropdownItemClass}-selected`]: item.value === this.controllableState.state.value
+                });
+            }
+            return classNames(selectDropdownItemWrapperClass, {
+                [`${selectDropdownItemClass}-selected`]: this.controllableState.state.value.indexOf(item.value) !== -1
+            });
+        }
+        /**
+         * 下拉框的样式style
+         * @param triggerNode
+         * @protected
+         */
+        getDropdownStyle(triggerNode) {
+            if (!triggerNode) {
+                return;
+            }
+            const { clientWidth } = triggerNode;
+            const style = {
+                'max-height': `${this.props.listHeight}px`
+            };
+            if (this.props.popupMatchSelectWidth) {
+                style['width'] = `${clientWidth}px`;
+            }
+            return stylesToString(style);
+        }
+        /**
+         * 判断下拉框中是否显示已选的后缀标识
+         * @param option 选项
+         * @protected
+         */
+        showSelectedSuffix(option) {
+            return this.props.multiple && this.controllableState.state.value.indexOf(option.value) !== -1;
+        }
+        /**
+         * 点击外部区域时，关闭下拉框
+         * @param event
+         * @protected
+         */
+        onClickOutsideHandler(event) {
+            const target = event.target;
+            // 在点击非选择框区域和非选项区域时，关闭下拉框
+            if (!this.containerRef.el?.contains(target) && !this.triggerRef.current?.wrapperRef.el?.contains(target)) {
+                if (this.controllableState.state.open) {
+                    this.toggleOpen(false);
+                }
+                this.state.focus = false;
+                this.timerClear();
+            }
+        }
+        onScroll(event, position) {
+            this.props.onPopupScroll?.(event, position);
+        }
+        /**
+         * 清空选项的回调
+         * @param event
+         * @protected
+         */
+        handleClear(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.controllableState.setState({
+                value: this.props.multiple ? [] : undefined
+            });
+            this.props.onClear?.();
+        }
+        /**
+         * 选中下拉选项的回调
+         * @param option
+         * @protected
+         */
+        handleChoice(option) {
+            if (this.props.multiple) {
+                const { value } = option;
+                const stateValue = [...this.controllableState.state.value];
+                const index = stateValue.indexOf(value);
+                if (index === -1) {
+                    // 新选中
+                    stateValue.push(value);
+                    this.controllableState.setState({
+                        value: stateValue
+                    });
+                    this.props.onSelect?.(option);
+                }
+                else {
+                    // 取消选中
+                    this.handleDeleteChoice(option);
+                }
+            }
+            else {
+                this.controllableState.setState({
+                    value: option.value
+                });
+                this.props.onSelect?.(option);
+            }
+            if (!this.props.multiple) {
+                this.timerClear();
+                this.onDropdownVisibleChange(false);
+            }
+            else if (this.props.autoClearSearchValue) {
+                this.clear();
+            }
+        }
+        /**
+         * 取消选中值的回调
+         * @param option
+         * @protected
+         */
+        handleDeleteChoice(option) {
+            const filterValues = this.controllableState.state.value.filter((v) => v !== option.value);
+            this.controllableState.setState({
+                value: filterValues
+            });
+            this.props.onDeselect?.(option);
+        }
+        /**
+         * 根据value值获取对应的option
+         * @param value
+         * @protected
+         */
+        getOption(value) {
+            return this.props.options.find((c) => c.value === value);
+        }
+        setup() {
+            const target = { el: window };
+            useImperativeHandle(() => ({
+                focus: () => {
+                    this.state.focus = true;
+                    this.props.onFocus?.();
+                },
+                blur: () => {
+                    this.state.focus = false;
+                }
+            }), () => []);
+            useEventListener(target, 'mousedown', this.onClickOutsideHandler);
+            // 监听尺寸变化，如果是打开状态并且尺寸发生了变化，则进行对齐，使用ResizeObserver节约性能开销
+            useResizeObserver(this.containerRef, (entry) => {
+                if (this.controllableState.state.open) {
+                    this.triggerRef.current?.align();
+                }
+            });
+            owl.useEffect(() => {
+                this.colsState.state.columns = this.props.options;
+            }, () => [this.props.options]);
+            // 是否默认展开逻辑
+            owl.useEffect(() => {
+                if (this.props.defaultOpen && !this.props.disabled) {
+                    this.state.triggerNode = this.containerRef.el;
+                    this.onDropdownVisibleChange(true);
+                }
+                // 初始有焦点时触发一次onFocus事件
+                if (this.props.autoFocus) {
+                    this.props.onFocus?.();
+                }
+            }, () => []);
+            // 在输入框宽度不足时进行适配换行处理
+            owl.useEffect(() => {
+                if (!this.searchSpanRef.el) {
+                    return;
+                }
+                let width = '4px';
+                if (this.state.searchValue) {
+                    width = getComputedStyle(this.searchTempRef.el).width;
+                }
+                this.searchSpanRef.el.style.width = width;
+            }, () => [this.state.searchValue, this.searchSpanRef.el]);
         }
     }
 
@@ -5485,8 +7462,8 @@
 
     setThemes('#71639e');
     const __info__ = {
-        version: 'beta-1.0.0',
-        date: '2023-12-15T08:04:18.567Z'
+        version: 'beta-1.1.0',
+        date: '2023-12-28T08:11:57.995Z'
     };
 
     exports.Col = Col;
@@ -5494,6 +7471,7 @@
     exports.InputNumber = InputNumber;
     exports.List = List;
     exports.Row = Row;
+    exports.Select = Select;
     exports.__info__ = __info__;
 
     return exports;
