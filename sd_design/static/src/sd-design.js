@@ -588,6 +588,12 @@
         }
     }
 
+    const formatValue = (value, format) => {
+        if (value !== undefined) {
+            value = format ? format(value) : value;
+        }
+        return value;
+    };
     /**
      * 管理受控组件的值，比如props中未传入某个值时，由组件内部管理一个state，传入了则交由外部管理
      * @param props 组件的props
@@ -598,8 +604,8 @@
         const state = owl.useState(defaultState);
         const updateState = (props) => {
             for (const key in props) {
-                if (key in defaultState && props[key] !== undefined) {
-                    state[key] = format ? format(props[key]) : props[key];
+                if (key in defaultState) {
+                    state[key] = formatValue(props[key], format);
                 }
             }
         };
@@ -610,8 +616,8 @@
         const setState = (values) => {
             for (const key in values) {
                 // 如果props中未传入该值，说明是非受控组件，则交由组件内部管理
-                if (!(key in props) && values[key] !== undefined) {
-                    state[key] = format ? format(values[key]) : values[key];
+                if (!(key in props)) {
+                    state[key] = formatValue(values[key], format);
                 }
             }
         };
@@ -6252,6 +6258,7 @@
             virtual: false,
             popupMatchSelectWidth: true,
             multiple: false,
+            bordered: true,
             placement: 'bottomLeft'
         };
         state = owl.useState({
@@ -6461,7 +6468,9 @@
          * @protected
          */
         getPopupClass() {
-            return classNames(selectDropdownClass, this.props.popupClassName);
+            return classNames(selectDropdownClass, this.props.popupClassName, {
+                [`${selectDropdownClass}-virtual`]: !!this.props.virtual
+            });
         }
         /**
          * 选项的样式类
@@ -7462,8 +7471,8 @@
 
     setThemes('#71639e');
     const __info__ = {
-        version: 'beta-1.1.0',
-        date: '2023-12-28T08:11:57.995Z'
+        version: 'beta-1.1.1',
+        date: '2023-12-29T00:58:29.747Z'
     };
 
     exports.Col = Col;
