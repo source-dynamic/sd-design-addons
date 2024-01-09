@@ -4341,14 +4341,6 @@
         }
     }
 
-    class Item extends owl.Component {
-        static template = owl.xml `
-<div>
-    sasdf
-</div>    
-`;
-    }
-
     /**
      * 返回指定元素实时的宽高
      * @param targetRefName
@@ -4377,6 +4369,7 @@
         return state;
     };
 
+    const isObject = (value) => value !== null && typeof value === 'object';
     const isNumber = (value) => typeof value === 'number';
 
     const useEventListener = (targetRef, eventName, handler, eventParams) => {
@@ -4612,7 +4605,7 @@
     const listItemClass = getPrefixCls('list-item');
     const vrListItemClass = getPrefixCls('vr-list-item');
     class List extends owl.Component {
-        static components = { Item, VirtualList };
+        static components = { VirtualList };
         static props = {
             className: { type: String, optional: true },
             itemClassName: { type: Function, optional: true },
@@ -5829,7 +5822,7 @@
             ...baseProps
         };
         static defaultProps = {
-            destroyOnHide: false
+            destroyOnHide: true
         };
         static contentTemplate = `
 <div t-ref="wrapperRef" t-att-class="getClass()" t-portal="getPopupContainer()" t-att-style="getStyle()">
@@ -6191,7 +6184,7 @@
         width: '64',
         height: '41'
     });
-    const loadingSVG = getSDSVG(_loadingSVG, {
+    const loadingSVG$1 = getSDSVG(_loadingSVG, {
         width: '1em',
         height: '1em'
     });
@@ -6234,6 +6227,7 @@
             autoFocus: { type: Boolean, optional: true },
             popupClassName: { type: String, optional: true },
             popupMatchSelectWidth: { type: Boolean, optional: true },
+            destroyOnHide: { type: Boolean, optional: true },
             showSearch: { type: Boolean, optional: true },
             filterOption: { type: Function, optional: true },
             filterSort: { type: Function, optional: true },
@@ -6257,6 +6251,7 @@
             listHeight: 256,
             virtual: false,
             popupMatchSelectWidth: true,
+            destroyOnHide: true,
             multiple: false,
             bordered: true,
             placement: 'bottomLeft'
@@ -6310,7 +6305,7 @@
         </t>
     </span>
     <Trigger ref="triggerRef" onScroll.bind="onScroll" className="getPopupClass()" isOpen="controllableState.state.open" triggerNode="state.triggerNode" 
-        getPopupContainer="props.getPopupContainer" getStyle.bind="getDropdownStyle" placement="props.placement">
+        getPopupContainer="props.getPopupContainer" destroyOnHide="props.destroyOnHide" getStyle.bind="getDropdownStyle" placement="props.placement">
         <t t-if="colsState.state.displayCols.length === 0">
             <t t-slot="empty">
                 <div class="${dropdownEmptyClass}">
@@ -6335,7 +6330,7 @@
         </t>
     </Trigger>
     <span class="${selectIconClass}">
-        <t t-if="props.loading"><span class="${selectRotateIconClass}">${loadingSVG}</span></t>
+        <t t-if="props.loading"><span class="${selectRotateIconClass}">${loadingSVG$1}</span></t>
         <t t-elif="state.searchValue">${searchSVG}</t>
         <t t-else="">${downSVG}</t>
         
@@ -7469,18 +7464,255 @@
         styleElement.innerHTML = cssVariables;
     };
 
+    const checkboxClass = getPrefixCls('checkbox');
+    const checkboxWrapperClass = `${checkboxClass}-wrapper`;
+    const checkboxInputClass = `${checkboxClass}-input`;
+    const checkboxInnerClass = `${checkboxClass}-inner`;
+    class Checkbox extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            disabled: { type: Boolean, optional: true },
+            defaultValue: { type: Boolean, optional: true },
+            value: { type: Boolean, optional: true },
+            indeterminate: { type: Boolean, optional: true },
+            onChange: { type: Function, optional: true },
+            name: { type: String, optional: true },
+            ...baseProps
+        };
+        get checkboxGroup() {
+            return this.env.checkboxGroup;
+        }
+        get checkboxGroupValue() {
+            return this.checkboxGroup?.controllableState.state.value;
+        }
+        get mergedValue() {
+            // 如果有checkboxGroup，则从checkboxGroup中获取value
+            if (this.checkboxGroupValue && this.props.name) {
+                return this.checkboxGroupValue.indexOf(this.props.name) > -1;
+            }
+            return this.controllableState.state.value;
+        }
+        get disabled() {
+            return this.env.checkboxGroup?.props.disabled ?? this.props.disabled;
+        }
+        controllableState = useControllableState(this.props, {
+            value: this.props.defaultValue ?? false
+        });
+        static template = owl.xml `
+<t t-set="classes" t-value="getClasses()"></t>
+<label t-att-class="classes.wrapper">
+    <span class="${checkboxClass}" t-on-click="onClick">
+        <t t-if="mergedValue">
+            <input type="checkbox" t-att-class="classes.input" checked="checked" t-att-disabled="props.disabled"/>
+        </t>
+        <t t-else="">
+            <input type="checkbox" t-att-class="classes.input" t-att-disabled="props.disabled"/>
+        </t>
+        <span t-att-class="classes.inner"/>
+    </span>
+    
+    <span>
+        <t t-slot="default"/>
+    </span>
+</label>    
+`;
+        getClasses() {
+            return {
+                wrapper: classNames(this.props.className, checkboxWrapperClass, {
+                    [`${checkboxWrapperClass}-disabled`]: this.disabled,
+                    [`${checkboxWrapperClass}-checked`]: this.mergedValue,
+                    [`${checkboxWrapperClass}-indeterminate`]: this.props.indeterminate
+                }),
+                input: checkboxInputClass,
+                inner: classNames(checkboxInnerClass, {
+                    [`${checkboxInnerClass}-checked`]: this.mergedValue,
+                    [`${checkboxInnerClass}-indeterminate`]: this.props.indeterminate
+                })
+            };
+        }
+        onClick() {
+            const { indeterminate } = this.props;
+            if (this.disabled || indeterminate) {
+                return;
+            }
+            this.toggleChecked();
+        }
+        /**
+         * 在checkboxGroup中切换选中状态
+         * @param force
+         * @protected
+         */
+        toggleCheckedInGroup(force) {
+            const currentChecked = this.checkboxGroupValue.indexOf(this.props.name) !== -1;
+            const toCheck = force ?? !currentChecked;
+            this.env.checkboxGroup?.onChange(toCheck, this.props.name);
+            this.props.onChange?.(toCheck);
+        }
+        /**
+         * 在独立使用时切换选中状态
+         * @param force
+         * @protected
+         */
+        toggleCheckedWithoutGroup(force) {
+            const toCheck = force ?? !this.controllableState.state.value;
+            this.controllableState.setState({
+                value: toCheck
+            });
+            this.props.onChange?.(toCheck);
+        }
+        /**
+         * 切换选中状态
+         * @param force
+         * @protected
+         */
+        toggleChecked(force) {
+            if (this.checkboxGroup && this.props.name) {
+                this.toggleCheckedInGroup(force);
+            }
+            else {
+                this.toggleCheckedWithoutGroup(force);
+            }
+        }
+    }
+
+    class Group extends owl.Component {
+        static props = {
+            disabled: { type: Boolean, optional: true },
+            options: { type: Array, optional: true },
+            onChange: { type: Function, optional: true },
+            defaultValue: { type: Array, optional: true },
+            value: { type: Array, optional: true },
+            ...baseProps
+        };
+        static components = { Checkbox };
+        static template = owl.xml `
+<t t-if="props.options">
+    <t t-foreach="props.options" t-as="option" t-key="option_index">
+        <t t-set="checkboxName" t-value="option.name || option"/>
+        <Checkbox name="checkboxName" value="controllableState.state.value.indexOf(checkboxName) > -1" disabled="option.disabled">
+            <t t-esc="showOption(option)"/>
+        </Checkbox>
+    </t>  
+</t>  
+<t t-else="">
+    <t t-slot="default"/>
+</t>
+`;
+        controllableState = useControllableState(this.props, {
+            value: this.props.defaultValue ?? []
+        });
+        showOption(option) {
+            if (isObject(option)) {
+                return option.label;
+            }
+            else if (!!option) {
+                return option;
+            }
+        }
+        onChange(checkedValue, name) {
+            const value = [...this.controllableState.state.value];
+            if (checkedValue) {
+                value.push(name);
+            }
+            else {
+                const index = value.indexOf(name);
+                value.splice(index, 1);
+            }
+            this.controllableState.setState({ value });
+            this.props.onChange?.(value);
+        }
+        setup() {
+            owl.useChildSubEnv({ checkboxGroup: this });
+        }
+    }
+
+    const CheckComponent = Checkbox;
+    CheckComponent.Group = Group;
+
+    const switchClass = getPrefixCls('switch');
+    const switchInnerClass = `${switchClass}-inner`;
+    const switchLoadingClass = `${switchClass}-loading`;
+    const loadingSVG = getSDSVG(_loadingSVG, {
+        width: '100%',
+        height: '100%'
+    }, switchLoadingClass);
+    class Switch extends owl.Component {
+        static props = {
+            className: { type: String, optional: true },
+            value: { type: Boolean, optional: true },
+            defaultValue: { type: Boolean, optional: true },
+            disabled: { type: Boolean, optional: true },
+            loading: { type: Boolean, optional: true },
+            size: { type: String, optional: true },
+            onChange: { type: Function, optional: true },
+            ...baseProps
+        };
+        static template = owl.xml `
+<t t-set="classes" t-value="getClasses()"></t>
+<span t-att-class="classes.switch" t-on-click="onClick">
+    <span t-att-class="classes.handle">
+        <t t-if="props.loading">${loadingSVG}</t>
+    </span>
+    <span t-att-class="classes.inner">
+        <span class="${switchInnerClass}-checked">
+            <t t-slot="checked"/>
+        </span>
+        <span class="${switchInnerClass}-unchecked">
+            <t t-slot="unchecked"/>
+        </span>
+    </span>
+</span>    
+`;
+        controllableState = useControllableState(this.props, {
+            value: this.props.defaultValue ?? false
+        });
+        get disabled() {
+            return this.props.disabled || this.props.loading;
+        }
+        getClasses() {
+            return {
+                'switch': classNames(switchClass, this.props.className, {
+                    [`${switchClass}-checked`]: this.controllableState.state.value,
+                    [`${switchClass}-disabled`]: this.disabled,
+                    [`${switchClass}-sm`]: this.props.size === 'small'
+                }),
+                handle: `${switchClass}-handle`,
+                inner: switchInnerClass
+            };
+        }
+        onClick() {
+            if (this.disabled) {
+                return;
+            }
+            this.handleToggle();
+        }
+        handleToggle(force) {
+            const toValue = force ?? !this.controllableState.state.value;
+            this.controllableState.setState({
+                value: toValue
+            });
+            this.props.onChange?.(toValue);
+        }
+    }
+
     setThemes('#71639e');
+    /**
+     * 被rollup打包后，会将__info__打包到js中
+     */
     const __info__ = {
-        version: 'beta-1.1.1',
-        date: '2023-12-29T00:58:29.747Z'
+        version: 'beta-1.2.0',
+        date: '2024-01-09T01:37:59.853Z'
     };
 
+    exports.Checkbox = CheckComponent;
     exports.Col = Col;
     exports.Input = InputComponent;
     exports.InputNumber = InputNumber;
     exports.List = List;
     exports.Row = Row;
     exports.Select = Select;
+    exports.Switch = Switch;
+    exports.VirtualList = VirtualList;
     exports.__info__ = __info__;
 
     return exports;
